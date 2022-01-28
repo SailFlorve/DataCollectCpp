@@ -1,0 +1,131 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// 中文(简体，中国) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
+#pragma code_page(936)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""winres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_MAIN DIALOGEX 0, 0, 309, 295
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Dialog"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    PUSHBUTTON      "发文本消息",IDC_BUTTON_TEST,213,39,59,15
+    EDITTEXT        IDC_EDIT_ID,62,19,115,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_TEXT,63,43,115,14,ES_AUTOHSCROLL
+    LTEXT           "消息内容",IDC_STATIC,16,45,35,17
+    LTEXT           "微信ID",IDC_STATIC,19,24,39,17
+    PUSHBUTTON      "关闭消息拦截",IDC_BUTTON_RECEMSGHOOK_STOP,120,70,53,19
+    PUSHBUTTON      "开启消息拦截",IDC_BUTTON_RECEMSGHOOK_START,55,70,53,19
+    EDITTEXT        IDC_EDIT_WXNAME,63,100,115,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "获取微信名称",IDC_BUTTON_GETNAMEBYID,213,97,59,15
+    LTEXT           "通过微信ID获取名称",IDC_STATIC,19,100,38,27
+    EDITTEXT        IDC_EDIT_IMGPATH,63,123,115,14,ES_AUTOHSCROLL
+    LTEXT           "图片路径",IDC_STATIC,18,126,34,11
+    PUSHBUTTON      "发送图片",IDC_BUTTON_SENDIMG,213,122,59,15
+    PUSHBUTTON      "获取群成员",IDC_BUTTON_GETROOMFRIEND,213,146,59,15
+    PUSHBUTTON      "开始拦截数据库",IDC_BUTTON_GETSQLDBSTART,49,149,60,17
+    PUSHBUTTON      "停止拦截",IDC_BUTTON_GETSQLDBSTOP,115,149,60,17
+    EDITTEXT        IDC_EDIT_SQLDB,63,195,115,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_SQLTEXT,63,218,115,14,ES_AUTOHSCROLL
+    LTEXT           "数据库句柄",IDC_STATIC,16,196,43,11
+    LTEXT           "sql语句",IDC_STATIC,17,218,43,11
+    PUSHBUTTON      "执行sql语句",IDC_BUTTON_RUNSQLEXEC,213,217,59,15
+    EDITTEXT        IDC_EDIT_CARDXML,63,239,115,14,ES_AUTOHSCROLL
+    LTEXT           "名片 xml",IDC_STATIC,18,241,39,11
+    PUSHBUTTON      "发送名片",IDC_BUTTON_SENDCARD,213,239,59,15
+    EDITTEXT        IDC_EDIT_VER,63,260,115,14,ES_AUTOHSCROLL
+    LTEXT           "版本号",IDC_STATIC,25,262,29,11
+    PUSHBUTTON      "修改版本",IDC_BUTTON_REPAIRVER,214,259,59,15
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_MAIN, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 302
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 288
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_MAIN AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+#endif    // 中文(简体，中国) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

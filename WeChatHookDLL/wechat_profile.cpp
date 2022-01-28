@@ -27,13 +27,13 @@ ProfileHookAddress currentAddr;
 
 DWORD profileAddr;
 
-void startGetProfileHook(string version, DWORD dllAddress, GetProfileCallback callback)
+void startGetProfileHook(const string& version, DWORD dllAddress, GetProfileCallback callback)
 {
 	getProfileCallback = callback;
 
 	currentAddr = hookAdddrMap[version];
 
-	int* pHookAddr = (int*)&currentAddr;
+	int* pHookAddr = reinterpret_cast<int*>(&currentAddr);
 
 	for (int i = 0; i < sizeof(ProfileHookAddress) / sizeof(DWORD); i++) {
 		(*pHookAddr++) += dllAddress;
@@ -55,7 +55,7 @@ void stopGetProfileHook() {
 void __stdcall getProfile()
 {
 	if (getProfileCallback != nullptr) {
-		wchar_t* profilePath = (wchar_t*)profileAddr;
+		auto profilePath = reinterpret_cast<wchar_t*>(profileAddr);
 		char buf[MAX_PATH];
 		sprintf_s(buf, "%ws", profilePath);
 		getProfileCallback(string(buf));

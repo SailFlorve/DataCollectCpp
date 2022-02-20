@@ -204,8 +204,8 @@ void f(BOOL res, const wchar_t* msg) {
     cout << res << endl;
 }
 
-int main() {
-    injectL(L"WeChat.exe", L"D:\\Projects\\VSProjects\\WeChatHook\\Debug\\WeChatHookDLL.dll", f);
-    // InjectDll(48420, L"D:\\Projects\\VSProjects\\WeChatHook\\Debug\\WeChatHookDLL.dll");
-
-}
+// int main() {
+//     injectL(L"WeChat.exe", L"D:\\Projects\\VSProjects\\WeChatHook\\Debug\\WeChatHookDLL.dll", f);
+//     // InjectDll(48420, L"D:\\Projects\\VSProjects\\WeChatHook\\Debug\\WeChatHookDLL.dll");
+//
+// }

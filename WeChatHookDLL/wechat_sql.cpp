@@ -338,6 +338,7 @@ void __stdcall getDb(DWORD pEsi)
 		handleMap[dbName] = info;
 	}
 
+	// Applet是最后一个出现的数据库，open它之后即回调获取句柄结束
 	if (pos4 != string::npos)
 	{
 		getHandleCallback(userPath, weChatId);

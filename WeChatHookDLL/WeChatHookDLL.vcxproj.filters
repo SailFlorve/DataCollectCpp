@@ -42,6 +42,9 @@
     <ClInclude Include="wechat_profile.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="common_util.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -66,6 +69,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="wechat_profile.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="common_util.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

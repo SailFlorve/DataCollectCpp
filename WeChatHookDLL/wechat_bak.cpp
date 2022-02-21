@@ -11,7 +11,7 @@ using namespace std;
 #pragma comment(lib, "libeay32.lib")
 
 #if _MSC_VER>=1900
-#include "stdio.h" 
+#include <cstdio>
 _ACRTIMP_ALT FILE* __cdecl __acrt_iob_func(unsigned);
 #ifdef __cplusplus 
 extern "C"

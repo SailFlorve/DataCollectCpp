@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "wechat_sql.h"
 #include "sqlite3.h"
+#include "common_util.h"
 
 using namespace std;
 
@@ -114,11 +115,11 @@ int __cdecl sqliteMasterCallback(void* msg, int colNum, char** colValue, char** 
 		}
 		log += "||";
 	}
-	OutputDebugStringA(log.c_str());
+	outputLog(log);
 
 	if (colNum != 2)
 	{
-		OutputDebugStringA("Col num is not 2");
+		outputLog("Col num is not 2");
 		return 0;
 	}
 
@@ -137,13 +138,14 @@ int __cdecl sqliteMasterCallback(void* msg, int colNum, char** colValue, char** 
 	if (createTableResult != 0)
 	{
 		sprintf_s(logChar, "Create table %s fail, %d, %s", tableName.c_str(), createTableResult, pErrMsg);
-		OutputDebugStringA(logChar);
+		outputLog(string(logChar));
+
 		return 1;
 	}
 	else
 	{
 		sprintf_s(logChar, "Create table %s success", tableName.c_str());
-		OutputDebugStringA(logChar);
+		outputLog(string(logChar));
 	}
 
 	// 更新table vector
@@ -157,13 +159,13 @@ int __cdecl sqliteMasterCallback(void* msg, int colNum, char** colValue, char** 
 	if (countResult == 0)
 	{
 		sprintf_s(logChar, "Select count success, count: %d", count);
-		OutputDebugStringA(logChar);
+		outputLog(logChar);
 		info.tableCountList.push_back(count);
 	}
 	else
 	{
 		sprintf_s(logChar, "Select count %s fail, %s", tableName.c_str(), pErrMsg);
-		OutputDebugStringA(logChar);
+		outputLog(logChar);
 		return 1;
 	}
 
@@ -197,9 +199,9 @@ int __cdecl selectAllCallback(void* msg, int colNum, char** colValue, char** col
 
 	if (insertResult != 0)
 	{
-		OutputDebugStringA(sql.c_str());
-		OutputDebugStringA("insert failed");
-		OutputDebugStringA(errMsg);
+		outputLog(sql);
+		outputLog("insert failed");
+		outputLog(errMsg);
 	}
 	else
 	{
@@ -235,12 +237,12 @@ int startCopyDb()
 
 		if (openResult != 0)
 		{
-			OutputDebugStringA((string("Open db ") + copyDbPath + "failed").c_str());
+			outputLog({ "Open db ", copyDbPath , "failed" });
 			continue;
 		}
 		else
 		{
-			OutputDebugStringA((string("Open db ") + copyDbPath + " success").c_str());
+			outputLog({ "Open db ", copyDbPath , " success" });
 			dbInfo.pCopyDb = pCopyDb;
 		}
 
@@ -249,7 +251,7 @@ int startCopyDb()
 		           reinterpret_cast<DWORD*>(sqliteMasterCallback));
 	}
 
-	OutputDebugStringA("query sqlite master finish");
+	outputLog("query sqlite master finish");
 
 	// 遍历表
 	for (auto it = handleMap.begin(); it != handleMap.end(); ++it)
@@ -261,13 +263,13 @@ int startCopyDb()
 
 		char log[100] = {0};
 		sprintf_s(log, "DB %s table count: %d", dbInfo.dbName.c_str(), tableList.size());
-		OutputDebugStringA(log);
+		outputLog(log);
 
 		int index = 0;
 		for (auto& tableName : tableList)
 		{
 			sprintf_s(log, "Select All From %s.%s", dbInfo.dbName.c_str(), tableName.c_str());
-			OutputDebugStringA(log);
+			outputLog(log);
 
 			dbInfo.tableName = tableName;
 			dbInfo.count = dbInfo.tableCountList[index];
@@ -277,7 +279,7 @@ int startCopyDb()
 
 			index++;
 			sprintf_s(log, "Select All and Insert Finish");
-			OutputDebugStringA(log);
+			outputLog(log);
 		}
 
 		sqlite3_exec(dbInfo.pCopyDb, "commit;", nullptr, nullptr, nullptr);
@@ -298,7 +300,7 @@ int runSqlExec(DWORD pDb, const char* sql, string dbName, DWORD* callback)
 		resultStr += errMsg;
 	}
 	resultStr += sql;
-	OutputDebugStringA(resultStr.c_str());
+	outputLog(resultStr);
 
 	return result;
 }
@@ -311,7 +313,7 @@ void __stdcall getDb(DWORD pEsi)
 	//  0            13          25
 	// "D:\Documents\WeChat Files\wxid_8rmcj0zs9itk22\Msg\Multi\MSG0.db"
 	sprintf_s(str, "DbName:%d Path:%s|", pEsi, path);
-	OutputDebugStringA(str);
+	outputLog(str);
 
 	string pathStr = string(path);
 
@@ -333,7 +335,7 @@ void __stdcall getDb(DWORD pEsi)
 	if ((pos1 != string::npos || pos2 != string::npos) && pos3 == string::npos)
 	{
 		sprintf_s(str, "Save %s", dbName.c_str());
-		OutputDebugStringA(str);
+		outputLog(str);
 		DbInfo info = {dbName, pEsi};
 		handleMap[dbName] = info;
 	}

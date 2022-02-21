@@ -10,4 +10,10 @@
 // 添加要在此处预编译的标头
 #include "framework.h"
 
+#include <string>
+#include <unordered_set>
+#include <strstream>
+#include <iostream>
+
+using namespace std;
 #endif //PCH_H

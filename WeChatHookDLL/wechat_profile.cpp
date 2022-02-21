@@ -1,12 +1,14 @@
 #include "pch.h"
 #include "wechat_profile.h"
 
+#include "common_util.h"
 void getProfileHookFunc();
 void overrideJnzHookFunc();
 
 GetProfileCallback getProfileCallback = nullptr;
 
-struct ProfileHookAddress {
+struct ProfileHookAddress
+{
 	DWORD hookAddr;
 	DWORD oldCallAddr;
 	DWORD reJumpAddr;
@@ -35,7 +37,8 @@ void startGetProfileHook(const string& version, DWORD dllAddress, GetProfileCall
 
 	int* pHookAddr = reinterpret_cast<int*>(&currentAddr);
 
-	for (int i = 0; i < sizeof(ProfileHookAddress) / sizeof(DWORD); i++) {
+	for (int i = 0; i < sizeof(ProfileHookAddress) / sizeof(DWORD); i++)
+	{
 		(*pHookAddr++) += dllAddress;
 	}
 
@@ -44,27 +47,28 @@ void startGetProfileHook(const string& version, DWORD dllAddress, GetProfileCall
 
 	profileHook1.HookReady(currentAddr.hookAddr, getProfileHookFunc);
 	profileHook1.StartHook();
-
 }
 
-void stopGetProfileHook() {
+void stopGetProfileHook()
+{
 	profileHook1.StopHook();
 	profileHook2.StopHook();
 }
 
 void __stdcall getProfile()
 {
-	if (getProfileCallback != nullptr) {
+	// 这里会命中两次，原因未知，第二次可能不是头像，待查
+	if (getProfileCallback != nullptr)
+	{
 		auto profilePath = reinterpret_cast<wchar_t*>(profileAddr);
 		char buf[MAX_PATH];
 		sprintf_s(buf, "%ws", profilePath);
 		getProfileCallback(string(buf));
-		OutputDebugStringA("Hook1");
-		OutputDebugStringA(buf);
+		outputLog({"WeChat get profile hook", buf});
 	}
 }
 
-__declspec(naked) void getProfileHookFunc() 
+__declspec(naked) void getProfileHookFunc()
 {
 	__asm {
 		add esp, 0x4;
@@ -76,12 +80,12 @@ __declspec(naked) void getProfileHookFunc()
 		popad;
 
 		jmp currentAddr.reJumpAddr;
-	}
+		}
 }
 
 __declspec(naked) void overrideJnzHookFunc()
 {
 	__asm {
 		jmp currentAddr.jnzReJumpAddr;
-	}
+		}
 }

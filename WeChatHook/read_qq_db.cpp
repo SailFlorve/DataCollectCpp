@@ -29,7 +29,7 @@ int callback(void* msg, int colNum, char** colVal, char** colName)
 	return 0;
 }
 
-int main()
+int amain()
 {
 	sqlite3* db;
 	int rec = sqlite3_open(R"(D:\WeChatDecrypt\BD82E3508DBEE52F432A731EA5FC3228)", &db);

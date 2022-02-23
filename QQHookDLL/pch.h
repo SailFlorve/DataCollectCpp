@@ -9,9 +9,10 @@
 
 // 添加要在此处预编译的标头
 #include "framework.h"
-
+#include <Windows.h>
 #include <string>
 #include <unordered_set>
+#include <unordered_map>
 #include <strstream>
 #include <iostream>
 

@@ -319,7 +319,7 @@ void __stdcall getDb(DWORD pEsi)
 
 	if (userPath.length() == 0)
 	{
-		size_t posTmp = pathStr.rfind("WeChat Files");
+		size_t posTmp = pathStr.rfind("WeChat Files"); // rfind 字符串右侧开始匹配str，并返回在字符串中的位置
 		userPath = pathStr.substr(0, posTmp + 13); // .../WeChat Files/
 		weChatId = pathStr.substr(posTmp + 13, 19); // wxid_...
 	}

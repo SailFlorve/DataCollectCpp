@@ -1,6 +1,5 @@
 #pragma once
 #include "pch.h"
-#pragma comment(lib, "Version.lib")
 
 typedef void (*GetHandleCallback)(const string&, const string&);
 

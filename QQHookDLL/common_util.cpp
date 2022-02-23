@@ -2,6 +2,8 @@
 #include "pch.h"
 #include "common_util.h"
 
+#pragma comment(lib, "Version.lib")
+
 string getFileVersion(HMODULE hmodule)
 {
 	WCHAR versionFilePath[MAX_PATH];
@@ -45,10 +47,9 @@ string getFileVersion(HMODULE hmodule)
 
 void sendPipeMessage(LPCWSTR pipeName, const vector<string>& messages)
 {
-
 	HANDLE handle = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE,
-		FILE_SHARE_WRITE | FILE_SHARE_READ,
-		nullptr, CREATE_ALWAYS, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+	                           FILE_SHARE_WRITE | FILE_SHARE_READ,
+	                           nullptr, CREATE_ALWAYS, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		cerr << "Failed to open the appointed named pipe!Error code:" << GetLastError() << endl;
@@ -62,7 +63,7 @@ void sendPipeMessage(LPCWSTR pipeName, const vector<string>& messages)
 		message += "\n";
 	}
 
-	char buf_msg[1024] = { 0 };
+	char buf_msg[1024] = {0};
 	strcpy_s(buf_msg, message.c_str());
 
 	DWORD nums_rcv;
@@ -98,7 +99,7 @@ DWORD getDllAddress(const wchar_t* lpModuleName, int maxRetry)
 
 void outputLog(const string& log, bool inConsole)
 {
-	outputLog({ log }, inConsole);
+	outputLog({log}, inConsole);
 }
 
 void outputLog(initializer_list<string> logs, bool inConsole)
@@ -114,4 +115,22 @@ void outputLog(initializer_list<string> logs, bool inConsole)
 	{
 		cout << logStr << endl;
 	}
+}
+
+string getKeyStrHex(int len, char* key)
+{
+	char change[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+	string result;
+	for (int i = 0; i < len; i++)
+	{
+		result += "0x";
+		unsigned char high_4bit = (key[i] & 0xf0) >> 4;
+		unsigned char low_4bit = key[i] & 0x0f;
+		result += change[high_4bit];
+		result += change[low_4bit];
+		if (i == len - 1)
+			break;
+		result += ",";
+	}
+	return result;
 }

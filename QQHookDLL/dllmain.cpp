@@ -2,14 +2,46 @@
 // ReSharper disable CppClangTidyCppcoreguidelinesNarrowingConversions
 // ReSharper disable CppClangTidyBugproneNarrowingConversions
 #include "pch.h"
+
+#include <thread>
+
 #include "common_util.h"
+#include "Chook.h"
 
 using namespace std;
 
 void __stdcall start();
+void startGetDbKeyHook();
+void bakDbKeyHookFunc();
 
-const wstring pipeName = L"QQ_TEMP";
+struct QQHookAddress
+{
+	DWORD bakDbKeyHookAddr;
+	DWORD innerOpenAddr;
+	DWORD bakDbKeyHookReJmpAddr;
+};
+
+const wchar_t* pipeName = L"\\\\.\\pipe\\WECHAT_TEMP";
+
 unordered_set<string> supportVersionSet = {"9.5.5.28104"};
+unordered_map<string, QQHookAddress> addrMap = {
+	{
+		"9.5.5.28104", {0x32C42, 0x33121, 0x32C42 + 0x5}
+	}
+};
+unordered_map<string, string> dbKeyMap;
+
+Chook chook;
+QQHookAddress currentAddr;
+
+DWORD lastDbPath;
+DWORD lastDbKey;
+
+int bakDbKeyNum = 0;
+string userId;
+string userPath;
+string profilePath = "/";
+
 
 BOOL APIENTRY DllMain(HMODULE hModule,
                       DWORD ul_reason_for_call,
@@ -19,9 +51,22 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
+
+		_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+		_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+		_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+		_CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
+
 		MessageBox(nullptr, L"请登录成功后，在菜单中手动选择“聊天记录备份与恢复”。", L"采集工具", MB_OK);
-		CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(start), hModule, NULL, nullptr);
+		CreateThread(nullptr, 0,
+		             reinterpret_cast<LPTHREAD_START_ROUTINE>(start), hModule,
+		             NULL, nullptr);
+	// if (handle != nullptr)
+	// {
+	// 	CloseHandle(handle);
+	// }
 		break;
+
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
 	case DLL_PROCESS_DETACH:
@@ -34,7 +79,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 
 void __stdcall start()
 {
-	DWORD dllAddress = getDllAddress(L"KernelUtil.h");
+	DWORD dllAddress = getDllAddress(L"KernelUtil.dll");
 
 	string version = getFileVersion(reinterpret_cast<HMODULE>(dllAddress));
 
@@ -45,7 +90,92 @@ void __stdcall start()
 		return;
 	}
 
-	//TODO
-	// startGetDbKeyHook();
+	currentAddr = addrMap[version];
+
+	auto pHookAddr = reinterpret_cast<unsigned long*>(&currentAddr);
+	for (unsigned int i = 0; i < sizeof(QQHookAddress) / sizeof(DWORD); i++)
+	{
+		(*pHookAddr++) += dllAddress;
+	}
+
+	startGetDbKeyHook();
 	// startGetProfileHook();
+}
+
+void startGetDbKeyHook()
+{
+	chook.HookReady(currentAddr.bakDbKeyHookAddr, bakDbKeyHookFunc);
+	chook.StartHook();
+}
+
+void sendMsg()
+{
+	bool isSuccess = userPath.length() != 0 && bakDbKeyNum > 0 && !dbKeyMap.empty();
+	if (!isSuccess)
+	{
+		outputLog("Send Error");
+		sendPipeMessage(pipeName, {"ERROR"});
+		return;
+	}
+
+	string dbKeyStr;
+	for (const auto& dbKeyPair : dbKeyMap)
+	{
+		dbKeyStr += dbKeyPair.first;
+		dbKeyStr += "&";
+		dbKeyStr += dbKeyPair.second;
+		dbKeyStr += "#";
+	}
+
+	outputLog({"Send ", userPath, userId, dbKeyStr});
+	sendPipeMessage(pipeName, {"SUCCESS", userPath, userId, dbKeyStr, profilePath});
+}
+
+void __stdcall handleGetDbKey()
+{
+	auto path = string(reinterpret_cast<char*>(lastDbPath));
+	auto bakKey = reinterpret_cast<char*>(lastDbKey);
+
+	string keyStr = getKeyStrHex(16, bakKey);
+
+	outputLog({path, keyStr});
+
+	dbKeyMap[path] = keyStr;
+
+	string::size_type pos = path.find("MsgBackup");
+
+	if (pos != string::npos)
+	{
+		bakDbKeyNum += 1;
+		userPath = path.substr(0, pos - 1);
+		size_t lastSepIndex = userPath.rfind('\\');
+		userId = userPath.substr(lastSepIndex + 1, userPath.length());
+	}
+
+	if (bakDbKeyNum == 4)
+	{
+		chook.StopHook();
+		outputLog({"Hook Stop. UserPath:", userPath});
+		sendMsg();
+	}
+}
+
+__declspec(naked) void bakDbKeyHookFunc()
+{
+	__asm
+		{
+
+		pushad
+		mov lastDbPath, eax
+		mov lastDbKey, esi
+		call handleGetDbKey
+		popad;
+
+		push dword ptr ss : [ebp + 0x1c]
+		push edi
+		push esi
+
+		jmp currentAddr.bakDbKeyHookReJmpAddr
+
+		}
 }

@@ -267,7 +267,7 @@ char* Get_BAK_Key(DWORD baseAddr, char* bakkey, BackupKeyAddress addr)
 
 int outputKey(char* BAK_Key)
 {
-	char change[] = { '0','1','2','3','4','5','6','7','8','9','0','A','B','C','D','E','F' };
+	char change[] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
 	string output_Key;
 	for (int i = 0; i < 0x20; i++)
 	{
@@ -286,7 +286,7 @@ int outputKey(char* BAK_Key)
 
 string getKeyStr(char* BAK_Key)
 {
-	char change[] = { '0','1','2','3','4','5','6','7','8','9','0','A','B','C','D','E','F' };
+	char change[] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
 	string result;
 	for (int i = 0; i < 0x20; i++)
 	{

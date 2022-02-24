@@ -50,9 +50,12 @@ void sendPipeMessage(LPCWSTR pipeName, const vector<string>& messages)
 	HANDLE handle = CreateFile(pipeName, GENERIC_READ | GENERIC_WRITE,
 	                           FILE_SHARE_WRITE | FILE_SHARE_READ,
 	                           nullptr, CREATE_ALWAYS, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+
 	if (handle == INVALID_HANDLE_VALUE)
 	{
-		cerr << "Failed to open the appointed named pipe!Error code:" << GetLastError() << endl;
+		char errMsg[100] = {0};
+		sprintf_s(errMsg, "Failed to open the appointed named pipe!Error code: %lu", GetLastError());
+		outputLog(errMsg);
 		return;
 	}
 
@@ -62,19 +65,19 @@ void sendPipeMessage(LPCWSTR pipeName, const vector<string>& messages)
 		message += msg;
 		message += "\n";
 	}
-
-	char buf_msg[1024] = {0};
+	char buf_msg[10240] = {0};
 	strcpy_s(buf_msg, message.c_str());
 
+	outputLog({"Send", buf_msg});
 	DWORD nums_rcv;
 	BOOL result = WriteFile(handle, buf_msg, strlen(buf_msg), &nums_rcv, nullptr);
 	if (result)
 	{
-		cout << "Write success" << endl;
+		outputLog("Write success");
 	}
 	else
 	{
-		cout << "Write Failed" << endl;
+		outputLog("Write Failed");
 	}
 	CloseHandle(handle);
 }
@@ -119,7 +122,7 @@ void outputLog(initializer_list<string> logs, bool inConsole)
 
 string getKeyStrHex(int len, char* key)
 {
-	char change[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'A', 'B', 'C', 'D', 'E', 'F'};
+	char change[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 	string result;
 	for (int i = 0; i < len; i++)
 	{
@@ -133,4 +136,23 @@ string getKeyStrHex(int len, char* key)
 		result += ",";
 	}
 	return result;
+}
+
+bool isProcessRunAsAdmin()
+{
+	SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+	PSID AdministratorsGroup;
+	BOOL b = AllocateAndInitializeSid(
+		&NtAuthority,
+		2,
+		SECURITY_BUILTIN_DOMAIN_RID,
+		DOMAIN_ALIAS_RID_ADMINS,
+		0, 0, 0, 0, 0, 0,
+		&AdministratorsGroup);
+	if (b)
+	{
+		CheckTokenMembership(nullptr, AdministratorsGroup, &b);
+		FreeSid(AdministratorsGroup);
+	}
+	return b == TRUE;
 }

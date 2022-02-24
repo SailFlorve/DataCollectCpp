@@ -39,6 +39,18 @@
 
 using namespace std;
 
+struct QQDllExportFuncAddress
+{
+	DWORD open;
+	DWORD exec;
+	DWORD key;
+	DWORD rekey;
+};
+
+unordered_map<string, QQDllExportFuncAddress> QQDllExportFuncAddressMap = {
+	{"9.5.5.28104", {0x365A6, 0x35967, 0x86E86, 0x87045}}
+};
+
 extern "C" {
 __declspec(dllexport) void inject(DWORD processId, wchar_t* dllPath, void (*callback)(BOOL, const wchar_t*));
 __declspec(dllexport) DWORD findProcessId(const wchar_t* processName);
@@ -47,6 +59,7 @@ __declspec(dllexport) int getProcessThreadCount(const wchar_t* processName, int*
 __declspec(dllexport) int isPidHasWindowText(DWORD pid, const wchar_t* text);
 __declspec(dllexport) int decryptBackup(const char* backupDir, const char* outputDir, int type, const char* bakKey);
 __declspec(dllexport) wchar_t* getDocumentsPath();
+__declspec(dllexport) int decryptQQDb(const wchar_t* dllPath, const char* dbPath, char* key);
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule,
@@ -78,21 +91,21 @@ void inject(DWORD processId, wchar_t* dllPath, void (*callback)(BOOL, const wcha
 	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, processId);
 	if (hProcess == nullptr)
 	{
-		callback(0, L"打开进程失败");
+		callback(1, L"打开进程失败");
 		return;
 	}
 	// 3.在进程进程为DLL字符串申请内存空间
 	LPVOID allocAddress = VirtualAllocEx(hProcess, nullptr, strSize, MEM_COMMIT, PAGE_READWRITE);
 	if (allocAddress == nullptr)
 	{
-		callback(0, L"分配空间失败");
+		callback(2, L"分配空间失败");
 		return;
 	}
 	// 4.把DLL路径写入到申请的内存
 	BOOL result = WriteProcessMemory(hProcess, allocAddress, dllPath, strSize, nullptr);
 	if (result == FALSE)
 	{
-		callback(0, L"写入内存失败");
+		callback(3, L"写入内存失败");
 		return;
 	}
 	// 5.从Kernel32.dll中获取loadLibraryA的函数地址
@@ -101,7 +114,7 @@ void inject(DWORD processId, wchar_t* dllPath, void (*callback)(BOOL, const wcha
 
 	if (farProc == nullptr)
 	{
-		callback(0, L"查找失败");
+		callback(4, L"查找失败");
 		return;
 	}
 	// 6. 在进程中启动DLL 返回新线程句柄
@@ -109,10 +122,10 @@ void inject(DWORD processId, wchar_t* dllPath, void (*callback)(BOOL, const wcha
 	                                            NULL);
 	if (newThreadHandle == nullptr)
 	{
-		callback(0, L"创建远程线程失败");
+		callback(5, L"创建远程线程失败");
 		return;
 	}
-	callback(1, L"注入成功");
+	callback(0, L"注入成功");
 }
 
 vector<PROCESSENTRY32> findProcessIdsInternal(const wchar_t* processName)
@@ -433,5 +446,58 @@ int decryptBackup(const char* backupDir, const char* outputDir, int type, const 
 	default:
 		break;
 	}
+	return 0;
+}
+
+string getKeyStrHex(int len, char* key)
+{
+	char change[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+	string result;
+	for (int i = 0; i < len; i++)
+	{
+		result += "0x";
+		unsigned char high_4bit = (key[i] & 0xf0) >> 4;
+		unsigned char low_4bit = key[i] & 0x0f;
+		result += change[high_4bit];
+		result += change[low_4bit];
+		if (i == len - 1)
+			break;
+		result += ",";
+	}
+	return result;
+}
+
+int decryptQQDb(const wchar_t* dllPath, const char* dbPath, char* key)
+{
+	cout << getKeyStrHex(16, key) << endl;
+
+	typedef int (*QQSqlite3Key)(void* pDB, void* pKey, int nSize);
+	typedef int (*QQSqlite3Open)(const char* fName, void* ppDB);
+	typedef int (*QQSqlite3Rekey)(void* pDB, void* pKey, int nSize);
+	typedef int (*QQSqlite3Exec)(void* pDB, const char* sql, void* callback, void* para, char** errMsg);
+
+	auto hMoudle = reinterpret_cast<DWORD>(LoadLibraryEx(dllPath, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH));
+
+	auto sql3Key = reinterpret_cast<QQSqlite3Key>(hMoudle + 0x86E86);
+	auto sql3Rekey = reinterpret_cast<QQSqlite3Rekey>(hMoudle + 0x87045);
+	auto sql3Open = reinterpret_cast<QQSqlite3Open>(hMoudle + 0x365A6);
+	auto sql3Exec = reinterpret_cast<QQSqlite3Exec>(hMoudle + 0x35967);
+
+	unsigned char rekey[16] = {};
+
+	void* pDB = nullptr;
+	int nResult = sql3Open(dbPath, &pDB);
+
+	cout << "OPEN " << nResult << endl;
+
+	if (nResult != 0)
+	{
+		cout << "open db error" << endl;
+		return 1;
+	}
+
+	cout << "KEY " << sql3Key(pDB, key, 16) << endl;
+	cout << "REKEY" << sql3Rekey(pDB, rekey, 16) << endl;
+
 	return 0;
 }

@@ -1,6 +1,7 @@
 ﻿// dllmain.cpp : 定义 DLL 应用程序的入口点。
 // ReSharper disable CppClangTidyCppcoreguidelinesNarrowingConversions
 // ReSharper disable CppClangTidyBugproneNarrowingConversions
+// ReSharper disable CppClangTidyConcurrencyMtUnsafe
 #include "pch.h"
 
 #include <thread>
@@ -21,7 +22,7 @@ struct QQHookAddress
 	DWORD bakDbKeyHookReJmpAddr;
 };
 
-const wchar_t* pipeName = L"\\\\.\\pipe\\WECHAT_TEMP";
+const wchar_t* pipeName = L"\\\\.\\pipe\\QQ_TEMP";
 
 unordered_set<string> supportVersionSet = {"9.5.5.28104"};
 unordered_map<string, QQHookAddress> addrMap = {
@@ -42,6 +43,9 @@ string userId;
 string userPath;
 string profilePath = "/";
 
+extern "C" {
+__declspec(dllexport) int decryptQQDb(const wchar_t* dllPath, const wchar_t* dbPath, unsigned char* key);
+}
 
 BOOL APIENTRY DllMain(HMODULE hModule,
                       DWORD ul_reason_for_call,
@@ -57,7 +61,16 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 		_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
 		_CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
 
-		MessageBox(nullptr, L"请登录成功后，在菜单中手动选择“聊天记录备份与恢复”。", L"采集工具", MB_OK);
+		if (!isProcessRunAsAdmin())
+		{
+			MessageBox(nullptr, L"没有管理员权限，请右键点击QQ，选择“属性”，打开“兼容性”选项卡，勾选“以管理员身份运行此程序”。",
+			           L"采集工具",
+			           MB_OK | MB_TOPMOST | MB_SETFOREGROUND);
+			system("taskkill /F /IM QQ.exe");
+			return TRUE;
+		}
+
+		MessageBox(nullptr, L"请登录成功后，在菜单中手动选择“聊天记录备份与恢复”。", L"采集工具", MB_OK | MB_TOPMOST | MB_SETFOREGROUND);
 		CreateThread(nullptr, 0,
 		             reinterpret_cast<LPTHREAD_START_ROUTINE>(start), hModule,
 		             NULL, nullptr);
@@ -127,7 +140,7 @@ void sendMsg()
 		dbKeyStr += "#";
 	}
 
-	outputLog({"Send ", userPath, userId, dbKeyStr});
+	outputLog({"Send ", userPath, userId, dbKeyStr}, true);
 	sendPipeMessage(pipeName, {"SUCCESS", userPath, userId, dbKeyStr, profilePath});
 }
 
@@ -138,7 +151,7 @@ void __stdcall handleGetDbKey()
 
 	string keyStr = getKeyStrHex(16, bakKey);
 
-	outputLog({path, keyStr});
+	outputLog({path, keyStr}, true);
 
 	dbKeyMap[path] = keyStr;
 
@@ -154,9 +167,10 @@ void __stdcall handleGetDbKey()
 
 	if (bakDbKeyNum == 4)
 	{
-		chook.StopHook();
-		outputLog({"Hook Stop. UserPath:", userPath});
+		outputLog({"Hook Stop. UserPath:", userPath}, true);
+		MessageBoxA(nullptr, "激活成功", "激活", MB_OK);
 		sendMsg();
+		chook.StopHook();
 	}
 }
 

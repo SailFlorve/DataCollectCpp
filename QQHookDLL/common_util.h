@@ -13,3 +13,5 @@ void outputLog(const string& log, bool inConsole = false);
 void outputLog(initializer_list<string> logs, bool inConsole = false);
 
 string getKeyStrHex(int len, char* key);
+
+bool isProcessRunAsAdmin();

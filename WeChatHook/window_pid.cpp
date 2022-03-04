@@ -1,6 +1,8 @@
 #include <string>
 #include <Windows.h>
 #include <iostream>
+
+#include "sqlite3.h"
 using namespace std;
 
 HWND GetHwndByPid(DWORD dwProcessID)
@@ -30,7 +32,12 @@ HWND GetHwndByPid(DWORD dwProcessID)
 	return hWnd;
 }
 
-int main(int argc, char* argv[])
+int aaamain(int argc, char* argv[])
 {
-	GetHwndByPid(0);
+	const char* s = "123123123";
+	cout << s << endl;
+	sqlite3* sq;
+	sqlite3_open("D:/Projects/VSProjects/DataCollectCpp/WeChatHook/test.db", &sq);
+	system("pause");
+	return 1;
 }

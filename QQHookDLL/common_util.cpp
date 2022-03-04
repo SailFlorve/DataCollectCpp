@@ -157,3 +157,13 @@ bool isProcessRunAsAdmin()
 	}
 	return b == TRUE;
 }
+
+wchar_t* getDocumentsPath()
+{
+	static wchar_t homePath[MAX_PATH] = { 0 };
+	if (!SHGetSpecialFolderPath(nullptr, homePath, CSIDL_PERSONAL, false))
+	{
+		return nullptr;
+	}
+	return homePath;
+}

@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <strstream>
 #include <iostream>
+#include <ShlObj.h>
 #include <shellapi.h>
 
 using namespace std;

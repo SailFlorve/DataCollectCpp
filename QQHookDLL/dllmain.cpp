@@ -22,6 +22,7 @@ struct QQHookAddress
 	DWORD bakDbKeyHookReJmpAddr;
 };
 
+
 const wchar_t* pipeName = L"\\\\.\\pipe\\QQ_TEMP";
 
 unordered_set<string> supportVersionSet = {"9.5.5.28104"};
@@ -30,6 +31,7 @@ unordered_map<string, QQHookAddress> addrMap = {
 		"9.5.5.28104", {0x32C42, 0x33121, 0x32C42 + 0x5}
 	}
 };
+
 unordered_map<string, string> dbKeyMap;
 
 Chook chook;
@@ -44,7 +46,7 @@ string userPath;
 string profilePath = "/";
 
 extern "C" {
-__declspec(dllexport) int decryptQQDb(const wchar_t* dllPath, const wchar_t* dbPath, unsigned char* key);
+
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule,
@@ -65,12 +67,12 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 		{
 			MessageBox(nullptr, L"没有管理员权限，请右键点击QQ，选择“属性”，打开“兼容性”选项卡，勾选“以管理员身份运行此程序”。",
 			           L"采集工具",
-			           MB_OK | MB_TOPMOST | MB_SETFOREGROUND);
+			           MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_SYSTEMMODAL);
 			system("taskkill /F /IM QQ.exe");
 			return TRUE;
 		}
 
-		MessageBox(nullptr, L"请登录成功后，在菜单中手动选择“聊天记录备份与恢复”。", L"采集工具", MB_OK | MB_TOPMOST | MB_SETFOREGROUND);
+		MessageBox(nullptr, L"请登录成功后，在菜单中手动选择“聊天记录备份与恢复”。", L"采集工具", MB_OK | MB_TOPMOST | MB_SETFOREGROUND | MB_SYSTEMMODAL);
 		CreateThread(nullptr, 0,
 		             reinterpret_cast<LPTHREAD_START_ROUTINE>(start), hModule,
 		             NULL, nullptr);
@@ -80,7 +82,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 	// }
 		break;
 
-	case DLL_THREAD_ATTACH:
+	case DLL_THREAD_ATTACH:           
 	case DLL_THREAD_DETACH:
 	case DLL_PROCESS_DETACH:
 		break;

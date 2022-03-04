@@ -13,11 +13,14 @@
 #include <openssl/hmac.h>
 #include <openssl/ssl.h>
 #include <cassert>
+#include <strstream>
 #include <unordered_map>
 #include <vector>
+#include "sqlite3.h"
 
 #pragma comment(lib, "ssleay32.lib")
 #pragma comment(lib, "libeay32.lib")
+#pragma comment(lib, "Version.lib")
 
 #undef _UNICODE
 #define SQLITE_FILE_HEADER "SQLite format 3"
@@ -39,28 +42,33 @@
 
 using namespace std;
 
-struct QQDllExportFuncAddress
-{
-	DWORD open;
-	DWORD exec;
-	DWORD key;
-	DWORD rekey;
-};
-
-unordered_map<string, QQDllExportFuncAddress> QQDllExportFuncAddressMap = {
-	{"9.5.5.28104", {0x365A6, 0x35967, 0x86E86, 0x87045}}
-};
-
 extern "C" {
 __declspec(dllexport) void inject(DWORD processId, wchar_t* dllPath, void (*callback)(BOOL, const wchar_t*));
 __declspec(dllexport) DWORD findProcessId(const wchar_t* processName);
 __declspec(dllexport) int findProcessIds(const wchar_t* processName, int* pids);
 __declspec(dllexport) int getProcessThreadCount(const wchar_t* processName, int* threadCounts);
 __declspec(dllexport) int isPidHasWindowText(DWORD pid, const wchar_t* text);
+__declspec(dllexport) int decryptWeChatBackupFile(const char* backupPath, const char* backupFile, const char* outputDir,
+                                                  unsigned char* key, int nKey);
+__declspec(dllexport) int decryptWeChatBackupDb(const char* dbDir, const char* fileName, const char* outputDir,
+                                                const unsigned char* pass, int nKey);
 __declspec(dllexport) int decryptBackup(const char* backupDir, const char* outputDir, int type, const char* bakKey);
 __declspec(dllexport) wchar_t* getDocumentsPath();
 __declspec(dllexport) int decryptQQDb(const wchar_t* dllPath, const char* dbPath, char* key);
 }
+
+struct QQDllExportFuncAddress
+{
+	DWORD open;
+	DWORD exec;
+	DWORD key;
+	DWORD rekey;
+	DWORD close;
+};
+
+unordered_map<string, QQDllExportFuncAddress> qqDllExportFuncAddressMap = {
+	{"9.5.5.28104", {0x365A6, 0x35967, 0x86E86, 0x87045, 0x6397A}}
+};
 
 BOOL APIENTRY DllMain(HMODULE hModule,
                       DWORD ul_reason_for_call,
@@ -74,6 +82,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 	case DLL_THREAD_DETACH:
 	case DLL_PROCESS_DETACH:
 		break;
+	default: ;
 	}
 	return TRUE;
 }
@@ -118,8 +127,8 @@ void inject(DWORD processId, wchar_t* dllPath, void (*callback)(BOOL, const wcha
 		return;
 	}
 	// 6. 在进程中启动DLL 返回新线程句柄
-	HANDLE newThreadHandle = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)farProc, allocAddress, 0,
-	                                            NULL);
+	HANDLE newThreadHandle = CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)farProc,
+	                                            allocAddress, 0, nullptr);
 	if (newThreadHandle == nullptr)
 	{
 		callback(5, L"创建远程线程失败");
@@ -227,9 +236,9 @@ int isPidHasWindowText(DWORD pid, const wchar_t* text)
 wchar_t* getDocumentsPath()
 {
 	static wchar_t homePath[MAX_PATH] = {0};
-	if (!SHGetSpecialFolderPath(NULL, homePath, CSIDL_PERSONAL, false))
+	if (!SHGetSpecialFolderPath(nullptr, homePath, CSIDL_PERSONAL, false))
 	{
-		return 0;
+		return nullptr;
 	}
 	return homePath;
 }
@@ -237,13 +246,13 @@ wchar_t* getDocumentsPath()
 unsigned char* CAES::aes_128_ecb_decrypt(const char* ciphertext, int text_size, const char* key, int key_size,
                                          int& size)
 {
-	EVP_CIPHER_CTX* ctx;
-	ctx = EVP_CIPHER_CTX_new();
-	int ret = EVP_DecryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, (const unsigned char*)key, NULL);
+	EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+	int ret = EVP_DecryptInit_ex(ctx, EVP_aes_128_ecb(), nullptr, reinterpret_cast<const unsigned char*>(key), nullptr);
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
 	//assert(ret == 1);
-	unsigned char* result = new unsigned char[text_size + 64]; // 弄个足够大的空间
+	auto result = new unsigned char[text_size + 64]; // 弄个足够大的空间
 	int len1 = 0;
-	ret = EVP_DecryptUpdate(ctx, result, &len1, (const unsigned char*)ciphertext, text_size);
+	ret = EVP_DecryptUpdate(ctx, result, &len1, reinterpret_cast<const unsigned char*>(ciphertext), text_size);
 	//assert(ret == 1);
 	int len2 = 0;
 	ret = EVP_DecryptFinal_ex(ctx, result + len1, &len2);
@@ -252,7 +261,7 @@ unsigned char* CAES::aes_128_ecb_decrypt(const char* ciphertext, int text_size, 
 	//assert(ret == 1);
 	EVP_CIPHER_CTX_free(ctx);
 	size = len1 + len2;
-	unsigned char* res = new unsigned char[size];
+	auto res = new unsigned char[size];
 	memcpy(res, result, size);
 	delete[] result;
 	return res;
@@ -282,8 +291,15 @@ bool writeToFile(const char* fileName, void const* buffer, size_t elementSize, s
 }
 
 // 0 成功 1 打开的文件不存在 2 key错误 3 写入文件出错
-int decryptBackupDb(const char* dbDir, const char* fileName, const char* outputDir, unsigned char* pass, int nKey)
+int decryptWeChatBackupDb(const char* dbDir, const char* fileName, const char* outputDir, const unsigned char* pass,
+                          int nKey)
 {
+	cout << dbDir;
+	cout << fileName;
+	cout << outputDir;
+	cout << pass;
+	cout << nKey;
+
 	FILE* fpdb;
 	string filePath;
 	filePath += dbDir;
@@ -390,10 +406,10 @@ int decryptBackupDb(const char* dbDir, const char* fileName, const char* outputD
 	return 0;
 }
 
-// 01 文件不存在 11 写入错误
-int decryptBackupFile(const char* backupPath, const char* backupFile, const char* outputDir, unsigned char* key,
-                      int nKey)
+int decryptWeChatBackupFile(const char* backupPath, const char* backupFile, const char* outputDir, unsigned char* key,
+                            int nKey)
 {
+
 	FILE* fpdb;
 	string fileName;
 	fileName += backupPath;
@@ -408,20 +424,37 @@ int decryptBackupFile(const char* backupPath, const char* backupFile, const char
 		return 1;
 	}
 	fseek(fpdb, 0, SEEK_END);
-	long nFileSize = ftell(fpdb);
-	fseek(fpdb, 0, SEEK_SET);
-	unsigned char* pDeBuffer = new unsigned char[nFileSize];
-	fread(pDeBuffer, 1, nFileSize, fpdb);
-	fclose(fpdb);
-	int size = 0;
-	unsigned char* decrypt = CAES::aes_128_ecb_decrypt((const char*)pDeBuffer, nFileSize, (const char*)key, nKey, size);
-	char decFile[1024] = {0};
-	sprintf_s(decFile, "%s\\decrypt_%s", outputDir, backupFile);
-	bool writeResult = writeToFile(decFile, decrypt, 1, size);
-	if (!writeResult)
+	long long nFileSize = ftell(fpdb);
+
+
+	for (long long i = 0; i < nFileSize; i += 204800000L)
 	{
-		return 3;
+		_fseeki64(fpdb, i, SEEK_SET);
+		int mallocSize = 204800000;
+		if (i + 204800000L > nFileSize)
+		{
+			mallocSize = nFileSize - i + 1L;
+		}
+		unsigned char* pDeBuffer = new unsigned char[mallocSize];
+		fread(pDeBuffer, 1, mallocSize, fpdb);
+		int size = 0;
+		unsigned char* decrypt = CAES::aes_128_ecb_decrypt((const char*)pDeBuffer, mallocSize, (const char*)key, nKey,
+		                                                   size);
+
+		char decFile[1024] = {0};
+		sprintf_s(decFile, "%s\\decrypt_%s", outputDir, backupFile);
+		bool writeResult = writeToFile(decFile, decrypt, 1, size);
+		if (!writeResult)
+		{
+			return 3;
+		}
+		delete[] pDeBuffer;
+		delete[] decrypt;
 	}
+
+
+	fclose(fpdb);
+
 	//MessageBoxA(NULL, "decrypt file sucess", "解密成功", MB_OK);
 	return 0;
 }
@@ -434,13 +467,14 @@ int decryptBackup(const char* backupDir, const char* outputDir, int type, const 
 	{
 	case 1:
 		{
-			int result = decryptBackupDb(backupDir, "Backup.db", outputDir, (unsigned char*)bakKey, 0x20);
+			int result = decryptWeChatBackupDb(backupDir, "Backup.db", outputDir, (unsigned char*)bakKey, 0x20);
 			if (result != 0)
 			{
 				return result;
 			}
-			result = decryptBackupFile(backupDir, "BAK_0_TEXT", outputDir, (unsigned char*)bakKey, 0x10);
-			result = result | decryptBackupFile(backupDir, "BAK_0_MEDIA", outputDir, (unsigned char*)bakKey, 0x10);
+			result = decryptWeChatBackupFile(backupDir, "BAK_0_TEXT", outputDir, (unsigned char*)bakKey, 0x10);
+			result = result |
+				decryptWeChatBackupFile(backupDir, "BAK_0_MEDIA", outputDir, (unsigned char*)bakKey, 0x10);
 			return result;
 		}
 	default:
@@ -467,37 +501,103 @@ string getKeyStrHex(int len, char* key)
 	return result;
 }
 
+string getFileVersion(HMODULE hmodule)
+{
+	WCHAR versionFilePath[MAX_PATH];
+	if (GetModuleFileName(hmodule, versionFilePath, MAX_PATH) == 0)
+	{
+		return "";
+	}
+
+	string versionStr;
+	VS_FIXEDFILEINFO* pVsInfo;
+	unsigned int iFileInfoSize = sizeof(VS_FIXEDFILEINFO);
+	int iVerInfoSize = GetFileVersionInfoSize(versionFilePath, nullptr);
+	if (iVerInfoSize != 0)
+	{
+		char* pBuf = new char[iVerInfoSize];
+		if (GetFileVersionInfo(versionFilePath, 0, iVerInfoSize, pBuf))
+		{
+			if (VerQueryValue(pBuf, TEXT("\\"), reinterpret_cast<void**>(&pVsInfo), &iFileInfoSize))
+			{
+				//主版本
+				//3
+				int marjorVersion = pVsInfo->dwFileVersionMS >> 16 & 0x0000FFFF;
+				//4
+				int minorVersion = pVsInfo->dwFileVersionMS & 0x0000FFFF;
+				//0
+				int buildNum = pVsInfo->dwFileVersionLS >> 16 & 0x0000FFFF;
+				//38
+				int revisionNum = pVsInfo->dwFileVersionLS & 0x0000FFFF;
+
+				//把版本变成字符串
+				strstream verSs;
+				verSs << marjorVersion << "." << minorVersion << "." << buildNum << "." << revisionNum;
+				verSs >> versionStr;
+			}
+		}
+		delete[] pBuf;
+	}
+
+	return versionStr;
+}
+
 int decryptQQDb(const wchar_t* dllPath, const char* dbPath, char* key)
 {
-	cout << getKeyStrHex(16, key) << endl;
+	OutputDebugStringW(dllPath);
+	OutputDebugStringA(dbPath);
+	OutputDebugStringA(getKeyStrHex(16, key).data());
 
 	typedef int (*QQSqlite3Key)(void* pDB, void* pKey, int nSize);
 	typedef int (*QQSqlite3Open)(const char* fName, void* ppDB);
 	typedef int (*QQSqlite3Rekey)(void* pDB, void* pKey, int nSize);
 	typedef int (*QQSqlite3Exec)(void* pDB, const char* sql, void* callback, void* para, char** errMsg);
+	typedef int (*QQSqlite3Close)(void* db, int forceZombie);
 
-	auto hMoudle = reinterpret_cast<DWORD>(LoadLibraryEx(dllPath, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH));
+	HMODULE hMoudle = LoadLibraryEx(dllPath, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+	auto dllAddress = reinterpret_cast<DWORD>(hMoudle);
 
-	auto sql3Key = reinterpret_cast<QQSqlite3Key>(hMoudle + 0x86E86);
-	auto sql3Rekey = reinterpret_cast<QQSqlite3Rekey>(hMoudle + 0x87045);
-	auto sql3Open = reinterpret_cast<QQSqlite3Open>(hMoudle + 0x365A6);
-	auto sql3Exec = reinterpret_cast<QQSqlite3Exec>(hMoudle + 0x35967);
+	auto fileVersion = getFileVersion(hMoudle);
+	if (qqDllExportFuncAddressMap.find(fileVersion) == qqDllExportFuncAddressMap.end())
+	{
+		return 2;
+	}
+	QQDllExportFuncAddress addr = qqDllExportFuncAddressMap[fileVersion];
+
+	auto sql3Key = reinterpret_cast<QQSqlite3Key>(dllAddress + addr.key);
+	auto sql3Rekey = reinterpret_cast<QQSqlite3Rekey>(dllAddress + addr.rekey);
+	auto sql3Open = reinterpret_cast<QQSqlite3Open>(dllAddress + addr.open);
+	auto sql3Exec = reinterpret_cast<QQSqlite3Exec>(dllAddress + addr.exec);
+	auto sql3Close = reinterpret_cast<QQSqlite3Close>(dllAddress + addr.close);
 
 	unsigned char rekey[16] = {};
 
-	void* pDB = nullptr;
-	int nResult = sql3Open(dbPath, &pDB);
+	sqlite3* pDb = nullptr;
 
-	cout << "OPEN " << nResult << endl;
+	int nResult = sql3Open(dbPath, &pDb);
 
 	if (nResult != 0)
 	{
-		cout << "open db error" << endl;
-		return 1;
+		OutputDebugStringA("open db error");
+		return nResult;
 	}
 
-	cout << "KEY " << sql3Key(pDB, key, 16) << endl;
-	cout << "REKEY" << sql3Rekey(pDB, rekey, 16) << endl;
+	nResult = sql3Key(pDb, key, 16);
+	if (nResult != 0)
+	{
+		OutputDebugStringA("key error");
+		return nResult;
+	}
+
+	nResult = sql3Rekey(pDb, rekey, 16);
+	if (nResult != 0)
+	{
+		OutputDebugStringA("rekey error");
+		return nResult;
+	}
+
+	int closeRes = sql3Close(pDb, 0);
+	OutputDebugStringA(to_string(closeRes).data());
 
 	return 0;
 }

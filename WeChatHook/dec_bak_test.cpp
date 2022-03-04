@@ -48,6 +48,7 @@ unsigned char* CAES::aes_128_ecb_decrypt(const char* ciphertext, int text_size, 
 	EVP_CIPHER_CTX* ctx;
 	ctx = EVP_CIPHER_CTX_new();
 	int ret = EVP_DecryptInit_ex(ctx, EVP_aes_128_ecb(), NULL, (const unsigned char*)key, NULL);
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
 	//assert(ret == 1);
 	unsigned char* result = new unsigned char[text_size + 64]; // 弄个足够大的空间
 	int len1 = 0;
@@ -64,40 +65,6 @@ unsigned char* CAES::aes_128_ecb_decrypt(const char* ciphertext, int text_size, 
 	memcpy(res, result, size);
 	delete[] result;
 	return res;
-}
-
-int decryptBackupFile(const char* defilename, unsigned char* key, int nKey)
-{
-	FILE* fpdb;
-	char filename[1024];
-	memset(filename, 0, sizeof(filename));
-	memcpy(filename, fileStorage, sizeof(fileStorage) - 1);
-	memcpy(filename + sizeof(fileStorage) - 1, defilename, strlen(defilename));
-	memset(filename + sizeof(fileStorage) - 1 + strlen(defilename), 0, 1);
-	fopen_s(&fpdb, filename, "rb+");
-	if (!fpdb)
-	{
-		MessageBoxA(NULL, "ERROR", "打开文件错误", MB_OK);
-		return 0;
-	}
-	fseek(fpdb, 0, SEEK_END);
-	long nFileSize = ftell(fpdb);
-	fseek(fpdb, 0, SEEK_SET);
-	unsigned char* pDeBuffer = new unsigned char[nFileSize];
-	fread(pDeBuffer, 1, nFileSize, fpdb);
-	fclose(fpdb);
-	int size = 0;
-	unsigned char* decrypt = CAES::aes_128_ecb_decrypt((const char*)pDeBuffer, nFileSize, (const char*)key, nKey, size);
-	char decFile[1024] = {0};
-	sprintf_s(decFile, "%sdec_%s", fileStorage, defilename);
-	FILE* fp;
-	fopen_s(&fp, decFile, "ab+");
-	{
-		fwrite(decrypt, 1, size, fp);
-		fclose(fp);
-	}
-	MessageBoxA(NULL, "decrypt file sucess", "解密成功", MB_OK);
-	return 0;
 }
 
 bool writeToFile(const char* fileName, void const* buffer, size_t elementSize, size_t elementCount)
@@ -123,8 +90,61 @@ bool writeToFile(const char* fileName, void const* buffer, size_t elementSize, s
 	}
 }
 
+int decryptBackupFile(const char* backupPath, const char* backupFile, const char* outputDir, unsigned char* key,
+                      int nKey)
+{
+	FILE* fpdb;
+	string fileName;
+	fileName += backupPath;
+	fileName += "\\";
+	fileName += backupFile;
+
+	fopen_s(&fpdb, fileName.c_str(), "rb+");
+	if (!fpdb)
+	{
+		//MessageBoxA(NULL, "ERROR", "打开文件错误", MB_OK);
+		printf("DecryptBackupFile Open file error %s\n", fileName.c_str());
+		return 1;
+	}
+	fseek(fpdb, 0, SEEK_END);
+	long long nFileSize = ftell(fpdb);
+	
+
+	for (long long i = 0; i < nFileSize; i += 204800000L)
+	{
+		_fseeki64(fpdb, i, SEEK_SET);
+		int mallocSize = 204800000;
+		if (i + 204800000L > nFileSize)
+		{
+			mallocSize = nFileSize - i + 1L;
+		}
+		unsigned char* pDeBuffer = new unsigned char[mallocSize];
+		fread(pDeBuffer, 1, mallocSize, fpdb);
+		int size = 0;
+		unsigned char* decrypt = CAES::aes_128_ecb_decrypt((const char*)pDeBuffer, mallocSize, (const char*)key, nKey,
+		                                                   size);
+
+		char decFile[1024] = {0};
+		sprintf_s(decFile, "%s\\decrypt_%s", outputDir, backupFile);
+		bool writeResult = writeToFile(decFile, decrypt, 1, size);
+		if (!writeResult)
+		{
+			return 3;
+		}
+		delete[] pDeBuffer;
+		delete[] decrypt;
+	}
+
+
+	fclose(fpdb);
+
+	//MessageBoxA(NULL, "decrypt file sucess", "解密成功", MB_OK);
+	return 0;
+}
+
 // 0 成功 1 打开的文件不存在 2 key错误 3 写入文件出错
-int decryptBackupDb(const char* dbDir, const char* fileName, const char* outputDir, unsigned char* pass, int nKey)
+int decryptWeChatBackupDb(const char* dbDir, const char* fileName, const char* outputDir, const unsigned char* pass,
+	int nKey)
 {
 	FILE* fpdb;
 	string filePath;
@@ -144,11 +164,11 @@ int decryptBackupDb(const char* dbDir, const char* fileName, const char* outputD
 	fread(pDbBuffer, 1, nFileSize, fpdb);
 	fclose(fpdb);
 
-	unsigned char salt[16] = {0};
+	unsigned char salt[16] = { 0 };
 	memcpy(salt, pDbBuffer, 16);
 
 #ifndef NO_USE_HMAC_SHA1
-	unsigned char mac_salt[16] = {0};
+	unsigned char mac_salt[16] = { 0 };
 	memcpy(mac_salt, salt, 16);
 	for (int i = 0; i < sizeof(salt); i++)
 	{
@@ -162,8 +182,8 @@ int decryptBackupDb(const char* dbDir, const char* fileName, const char* outputD
 #endif
 	reserve = ((reserve % AES_BLOCK_SIZE) == 0) ? reserve : ((reserve / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
-	unsigned char key[KEY_SIZE] = {0};
-	unsigned char mac_key[KEY_SIZE] = {0};
+	unsigned char key[KEY_SIZE] = { 0 };
+	unsigned char mac_key[KEY_SIZE] = { 0 };
 
 	OpenSSL_add_all_algorithms();
 	PKCS5_PBKDF2_HMAC_SHA1((const char*)pass, nKey, salt, sizeof(salt), DEFAULT_ITER, sizeof(key), key);
@@ -180,7 +200,7 @@ int decryptBackupDb(const char* dbDir, const char* fileName, const char* outputD
 	while (pTemp < pDbBuffer + nFileSize)
 	{
 #ifndef NO_USE_HMAC_SHA1
-		unsigned char hash_mac[HMAC_SHA1_SIZE] = {0};
+		unsigned char hash_mac[HMAC_SHA1_SIZE] = { 0 };
 		unsigned int hash_len = 0;
 		HMAC_CTX hctx;
 		HMAC_CTX_init(&hctx);
@@ -209,14 +229,14 @@ int decryptBackupDb(const char* dbDir, const char* fileName, const char* outputD
 		int nDecryptLen = 0;
 		int nTotal = 0;
 		EVP_CipherUpdate(ectx, pDecryptPerPageBuffer + offset, &nDecryptLen, pTemp + offset,
-		                 DEFAULT_PAGESIZE - reserve - offset);
+			DEFAULT_PAGESIZE - reserve - offset);
 		nTotal = nDecryptLen;
 		EVP_CipherFinal_ex(ectx, pDecryptPerPageBuffer + offset + nDecryptLen, &nDecryptLen);
 		nTotal += nDecryptLen;
 		EVP_CIPHER_CTX_free(ectx);
 
 		memcpy(pDecryptPerPageBuffer + DEFAULT_PAGESIZE - reserve, pTemp + DEFAULT_PAGESIZE - reserve, reserve);
-		char decFile[1024] = {0};
+		char decFile[1024] = { 0 };
 		sprintf_s(decFile, "%s\\decrypt_%s", outputDir, fileName);
 		bool writeResult = writeToFile(decFile, pDecryptPerPageBuffer, 1, DEFAULT_PAGESIZE);
 		if (!writeResult)
@@ -232,16 +252,10 @@ int decryptBackupDb(const char* dbDir, const char* fileName, const char* outputD
 	return 0;
 }
 
-// int main()
-// {
-// 	unsigned char key[16] = {
-// 		0x35, 0x37, 0x30, 0x39, 0x34, 0x36, 0x38, 0x36, 0x32, 0x32, 0x38, 0x44, 0x34, 0x34, 0x42, 0x30
-// 	};
-// 	unsigned char key2[16] = {
-// 		0x5A, 0xE8, 0xEF, 0x6C, 0x2F, 0x4A, 0xB2, 0x1D, 0x16, 0xA8, 0x87, 0x27, 0x35, 0xD3, 0xD7, 0x18
-// 	};
-// 	int res = decryptBackupDb(R"(D:\Documents\Tencent Files\452196872\MsgBackup\94447128374244F0F8A07ADE0CE42B7F\)",
-// 	                          "C3D9EAD2D29423B34EA71C2D5AC353DD", "D:\\", key2, 16);
-// 	std::cout << res << endl;
-// 	return 0;
-// }
+int main(int argc, char* argv[])
+{
+	decryptWeChatBackupDb(
+		R"(D:\Documents\WeChat Files\wxid_8rmcj0zs9itk22\BackupFiles\android_90c24abb4ed18109e5af20919b4cc64b\)",
+		"Backup.db",
+		R"(D:\WeChatDecrypt\wxid_8rmcj0zs9itk22)", (unsigned char*)"99c27b53665b225f114a7a08e811990e", 0x20);
+}

@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 #include "sqlite3.h"
+#include "common_util.h"
 
 #pragma comment(lib, "ssleay32.lib")
 #pragma comment(lib, "libeay32.lib")
@@ -53,7 +54,7 @@ __declspec(dllexport) int decryptWeChatBackupFile(const char* backupPath, const 
 __declspec(dllexport) int decryptWeChatBackupDb(const char* dbDir, const char* fileName, const char* outputDir,
                                                 const unsigned char* pass, int nKey);
 __declspec(dllexport) int decryptBackup(const char* backupDir, const char* outputDir, int type, const char* bakKey);
-__declspec(dllexport) wchar_t* getDocumentsPath();
+__declspec(dllexport) wchar_t* getUserDocumentsPath();
 __declspec(dllexport) int decryptQQDb(const wchar_t* dllPath, const char* dbPath, char* key);
 }
 
@@ -233,16 +234,6 @@ int isPidHasWindowText(DWORD pid, const wchar_t* text)
 	return result;
 }
 
-wchar_t* getDocumentsPath()
-{
-	static wchar_t homePath[MAX_PATH] = {0};
-	if (!SHGetSpecialFolderPath(nullptr, homePath, CSIDL_PERSONAL, false))
-	{
-		return nullptr;
-	}
-	return homePath;
-}
-
 unsigned char* CAES::aes_128_ecb_decrypt(const char* ciphertext, int text_size, const char* key, int key_size,
                                          int& size)
 {
@@ -288,6 +279,11 @@ bool writeToFile(const char* fileName, void const* buffer, size_t elementSize, s
 		printf("%s", e.what());
 		return false;
 	}
+}
+
+wchar_t* getUserDocumentsPath()
+{
+	return getDocumentsPath();
 }
 
 // 0 成功 1 打开的文件不存在 2 key错误 3 写入文件出错
@@ -409,7 +405,6 @@ int decryptWeChatBackupDb(const char* dbDir, const char* fileName, const char* o
 int decryptWeChatBackupFile(const char* backupPath, const char* backupFile, const char* outputDir, unsigned char* key,
                             int nKey)
 {
-
 	FILE* fpdb;
 	string fileName;
 	fileName += backupPath;
@@ -483,64 +478,6 @@ int decryptBackup(const char* backupDir, const char* outputDir, int type, const 
 	return 0;
 }
 
-string getKeyStrHex(int len, char* key)
-{
-	char change[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-	string result;
-	for (int i = 0; i < len; i++)
-	{
-		result += "0x";
-		unsigned char high_4bit = (key[i] & 0xf0) >> 4;
-		unsigned char low_4bit = key[i] & 0x0f;
-		result += change[high_4bit];
-		result += change[low_4bit];
-		if (i == len - 1)
-			break;
-		result += ",";
-	}
-	return result;
-}
-
-string getFileVersion(HMODULE hmodule)
-{
-	WCHAR versionFilePath[MAX_PATH];
-	if (GetModuleFileName(hmodule, versionFilePath, MAX_PATH) == 0)
-	{
-		return "";
-	}
-
-	string versionStr;
-	VS_FIXEDFILEINFO* pVsInfo;
-	unsigned int iFileInfoSize = sizeof(VS_FIXEDFILEINFO);
-	int iVerInfoSize = GetFileVersionInfoSize(versionFilePath, nullptr);
-	if (iVerInfoSize != 0)
-	{
-		char* pBuf = new char[iVerInfoSize];
-		if (GetFileVersionInfo(versionFilePath, 0, iVerInfoSize, pBuf))
-		{
-			if (VerQueryValue(pBuf, TEXT("\\"), reinterpret_cast<void**>(&pVsInfo), &iFileInfoSize))
-			{
-				//主版本
-				//3
-				int marjorVersion = pVsInfo->dwFileVersionMS >> 16 & 0x0000FFFF;
-				//4
-				int minorVersion = pVsInfo->dwFileVersionMS & 0x0000FFFF;
-				//0
-				int buildNum = pVsInfo->dwFileVersionLS >> 16 & 0x0000FFFF;
-				//38
-				int revisionNum = pVsInfo->dwFileVersionLS & 0x0000FFFF;
-
-				//把版本变成字符串
-				strstream verSs;
-				verSs << marjorVersion << "." << minorVersion << "." << buildNum << "." << revisionNum;
-				verSs >> versionStr;
-			}
-		}
-		delete[] pBuf;
-	}
-
-	return versionStr;
-}
 
 int decryptQQDb(const wchar_t* dllPath, const char* dbPath, char* key)
 {

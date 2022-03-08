@@ -21,16 +21,7 @@
     <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Chook.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="wechat_sql.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="sqlite3.h">
-      <Filter>源文件</Filter>
-    </ClInclude>
-    <ClInclude Include="AES.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="wechat_bak.h">
@@ -42,7 +33,16 @@
     <ClInclude Include="wechat_profile.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="common_util.h">
+    <ClInclude Include="..\Common\AES.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Chook.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\common_util.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\sqlite3.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -53,13 +53,7 @@
     <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Chook.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="wechat_sql.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="sqlite3.c">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="wechat_bak.cpp">
@@ -71,7 +65,13 @@
     <ClCompile Include="wechat_profile.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="common_util.cpp">
+    <ClCompile Include="..\Common\Chook.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\common_util.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Common\sqlite3.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

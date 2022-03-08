@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WeChatHook", "WeChatHook\WeChatHook.vcxproj", "{F8ACAF14-2E8D-4389-ACB9-E660450BF685}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WeChatHookDLL", "WeChatHookDLL\WeChatHookDLL.vcxproj", "{F5E5BC3F-5BE2-4AFB-8F4F-F205B353FEA5}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DataCollectUtil", "DataCollectUtil\DataCollectUtil.vcxproj", "{52DFF789-512F-4B8F-BCEF-3309153265BA}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QQHookDLL", "QQHookDLL\QQHookDLL.vcxproj", "{9976091B-6013-4DF0-B271-7C1DBA16858F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Common", "Common\Common.vcxproj", "{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,14 +19,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{F8ACAF14-2E8D-4389-ACB9-E660450BF685}.Debug|x64.ActiveCfg = Debug|x64
-		{F8ACAF14-2E8D-4389-ACB9-E660450BF685}.Debug|x64.Build.0 = Debug|x64
-		{F8ACAF14-2E8D-4389-ACB9-E660450BF685}.Debug|x86.ActiveCfg = Debug|Win32
-		{F8ACAF14-2E8D-4389-ACB9-E660450BF685}.Debug|x86.Build.0 = Debug|Win32
-		{F8ACAF14-2E8D-4389-ACB9-E660450BF685}.Release|x64.ActiveCfg = Release|x64
-		{F8ACAF14-2E8D-4389-ACB9-E660450BF685}.Release|x64.Build.0 = Release|x64
-		{F8ACAF14-2E8D-4389-ACB9-E660450BF685}.Release|x86.ActiveCfg = Release|Win32
-		{F8ACAF14-2E8D-4389-ACB9-E660450BF685}.Release|x86.Build.0 = Release|Win32
 		{F5E5BC3F-5BE2-4AFB-8F4F-F205B353FEA5}.Debug|x64.ActiveCfg = Debug|x64
 		{F5E5BC3F-5BE2-4AFB-8F4F-F205B353FEA5}.Debug|x64.Build.0 = Debug|x64
 		{F5E5BC3F-5BE2-4AFB-8F4F-F205B353FEA5}.Debug|x86.ActiveCfg = Debug|Win32
@@ -51,6 +43,14 @@ Global
 		{9976091B-6013-4DF0-B271-7C1DBA16858F}.Release|x64.Build.0 = Release|x64
 		{9976091B-6013-4DF0-B271-7C1DBA16858F}.Release|x86.ActiveCfg = Release|Win32
 		{9976091B-6013-4DF0-B271-7C1DBA16858F}.Release|x86.Build.0 = Release|Win32
+		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Debug|x64.ActiveCfg = Debug|x64
+		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Debug|x64.Build.0 = Debug|x64
+		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Debug|x86.ActiveCfg = Debug|Win32
+		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Debug|x86.Build.0 = Debug|Win32
+		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Release|x64.ActiveCfg = Release|x64
+		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Release|x64.Build.0 = Release|x64
+		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Release|x86.ActiveCfg = Release|Win32
+		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

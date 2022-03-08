@@ -21,10 +21,7 @@
     <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="AES.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="sqlite3.h">
+    <ClInclude Include="..\Common\common_util.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,8 +32,8 @@
     <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="sqlite3.c">
-      <Filter>源文件</Filter>
+    <ClCompile Include="..\Common\common_util.cpp">
+      <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -50,13 +50,20 @@ void getHandleCallbackAsync(string path, string id)
 	// 这里已经登上去了，不需要获取头像，否则获取到的不是头像
 	stopGetProfileHook();
 
-	startCopyDb();
+	int copyResult = startCopyDb();
 	// 等一会再解密数据库， 否则可能获取不到？
 	Sleep(1000);
 	string backupKey = getBackupKey(dllAddress, version);
 	if (backupKey.empty())
 	{
 		MessageBoxA(nullptr, "激活失败，无法获取备份数据库密钥，请尝试重新登录。", "激活", MB_OK);
+		sendPipeMessage(pipeName, {"ERROR"});
+		return;
+	}
+	if (copyResult != 0)
+	{
+		string msg = "激活失败，数据库出错。错误码：" + to_string(copyResult);
+		MessageBoxA(nullptr, msg.data(), "激活", MB_OK);
 		sendPipeMessage(pipeName, {"ERROR"});
 		return;
 	}

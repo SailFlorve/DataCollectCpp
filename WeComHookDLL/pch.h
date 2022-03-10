@@ -10,7 +10,7 @@
 // 添加要在此处预编译的标头
 #include "framework.h"
 #include "Chook.h"
-#include "sqlite3.h"
+#include <sql_copy.h>
 #include "common_util.h"
 #include <unordered_map>
 #include <thread>

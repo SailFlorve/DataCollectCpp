@@ -2,6 +2,7 @@
 #include "wechat_sql.h"
 #include "sqlite3.h"
 #include "common_util.h"
+#include "sql_copy.h"
 
 using namespace std;
 
@@ -14,23 +15,8 @@ typedef struct SqlHookAddress
 	DWORD openDatabaseAddr;
 } SqlHookAddress;
 
-typedef struct DbInfo
-{
-	string dbName;
-	DWORD pDb;
-	sqlite3* pCopyDb;
-	vector<string> tableList;
-	vector<int> tableCountList;
-	string tableName;
-	int count;
-	int currentCount;
-} DbInfo;
-
 void dbHandleHookFunc();
-int runSqlExec(DWORD pDb, const char* sql, string dbName, DWORD* callback);
-string generateCopyDbName(const string& dbName);
 
-typedef int (__cdecl* SqliteExec)(DWORD, const char*, DWORD*, void*, char**);
 typedef int (__cdecl* OpenDataBase)(const char*, DWORD, unsigned int, const char*);
 
 
@@ -45,7 +31,7 @@ unordered_map<string, SqlHookAddress> addrMap =
 
 SqlHookAddress currentAddr;
 
-SqliteExec sqlExec;
+SqliteExec sqliteExec;
 OpenDataBase openDb;
 
 unordered_map<string, DbInfo> handleMap;
@@ -70,7 +56,7 @@ void startGetDbHandleHook(const string& version, DWORD dllAddress, GetHandleCall
 
 	addrMap[version] = currentAddr;
 
-	sqlExec = reinterpret_cast<SqliteExec>(currentAddr.sqlExecAddr);
+	sqliteExec = reinterpret_cast<SqliteExec>(currentAddr.sqlExecAddr);
 	openDb = reinterpret_cast<OpenDataBase>(currentAddr.openDatabaseAddr);
 
 	sqlHook.HookReady(currentAddr.dBHandleHookAddr, dbHandleHookFunc);
@@ -82,227 +68,9 @@ void stopGetDbHandleHook()
 	sqlHook.StopHook();
 }
 
-int __cdecl queryTableCountCallback(void* msg, int colNum, char** colValue, char** colName)
-{
-	if (colNum == 1 && colValue)
-	{
-		*static_cast<int*>(msg) = atoi(colValue[0]);
-		return 0;
-	}
-	return 1;
-}
-
-// 1. 传入参数 2.列号 3.内容 4.列名
-// 此回调用于建表
-int __cdecl sqliteMasterCallback(void* msg, int colNum, char** colValue, char** colName)
-{
-	// select name, sql from sqlite_master where type='table'
-	string log;
-	string dbName = *static_cast<string*>(msg);
-	DbInfo& info = handleMap[dbName];
-
-	log += "DBNname: ";
-	log += info.dbName;
-
-	for (int i = 0; i < colNum; i++)
-	{
-		log += " ";
-		log += colName[i];
-		log += ":";
-		if (colValue[i] != nullptr)
-		{
-			log += string(colValue[i]);
-		}
-		log += "||";
-	}
-	outputLog(log);
-
-	if (colNum != 2)
-	{
-		outputLog("Col num is not 2");
-		return 0;
-	}
-
-	string tableName = string(colValue[0]);
-
-	if (tableName == "sqlite_sequence")
-	{
-		return 0;
-	}
-
-	char* pErrMsg = {nullptr};
-
-	// 执行建表语句
-	char logChar[100] = {0};
-	int createTableResult = sqlite3_exec(info.pCopyDb, colValue[1], nullptr, nullptr, &pErrMsg);
-	if (createTableResult != 0)
-	{
-		sprintf_s(logChar, "Create table %s fail, %d, %s", tableName.c_str(), createTableResult, pErrMsg);
-		outputLog(string(logChar));
-
-		return 1;
-	}
-	else
-	{
-		sprintf_s(logChar, "Create table %s success", tableName.c_str());
-		outputLog(string(logChar));
-	}
-
-	// 更新table vector
-	info.tableList.push_back(tableName);
-
-	// 查询count
-	int count = -1;
-	string sql = "select count(*) from " + tableName;
-	int countResult = sqlExec(info.pDb, sql.c_str(), reinterpret_cast<DWORD*>(queryTableCountCallback), &count,
-	                          &pErrMsg);
-	if (countResult == 0)
-	{
-		sprintf_s(logChar, "Select count success, count: %d", count);
-		outputLog(logChar);
-		info.tableCountList.push_back(count);
-	}
-	else
-	{
-		sprintf_s(logChar, "Select count %s fail, %s", tableName.c_str(), pErrMsg);
-		outputLog(logChar);
-		return 1;
-	}
-
-	return 0;
-}
-
-int __cdecl selectAllCallback(void* msg, int colNum, char** colValue, char** colName)
-{
-	string dbName = *static_cast<string*>(msg);
-	DbInfo& info = handleMap[dbName];
-	string tableName = info.tableName;
-
-	string sql;
-	sql += "insert into " + tableName;
-	sql += " values(";
-	for (int i = 0; i < colNum; i++)
-	{
-		sql += "'";
-		sql += colValue[i] == nullptr ? "NULL" : colValue[i];
-		sql += "'";
-
-		if (i != colNum - 1)
-		{
-			sql += ',';
-		}
-	}
-	sql += ");";
-
-	char* errMsg = {nullptr};
-	int insertResult = sqlite3_exec(info.pCopyDb, sql.c_str(), nullptr, nullptr, &errMsg);
-
-	if (insertResult != 0)
-	{
-		outputLog(sql);
-		outputLog("insert failed");
-		outputLog(errMsg);
-	}
-	else
-	{
-		info.currentCount += 1;
-		//string log;
-		//log += to_string(info.currentCount) + "/" + to_string(info.count) + " ";
-		//log += "insert success";
-		//OutputDebugStringA(log.c_str());
-	}
-
-	return 0;
-}
-
 int startCopyDb()
 {
-	// 删除旧的数据库复制缓存文件夹
-	string commandRmdir = "cmd /c rmdir /s /q \"" + userPath + R"(\decrypt_temp\")";
-	system(commandRmdir.c_str());
-	// 创建新的数据库复制缓存文件夹
-	string commandMkdir = "cmd /c mkdir \"" + userPath + "decrypt_temp\\" + weChatId + "\"";
-	system(commandMkdir.c_str());
-
-	// 查询sqlite_master， 建表、查询数量
-	for (auto it = handleMap.begin(); it != handleMap.end(); ++it)
-	{
-		DbInfo& dbInfo = it->second;
-
-		string copyDbName = generateCopyDbName(dbInfo.dbName);
-		string copyDbPath = userPath + string("decrypt_temp\\").append(weChatId).append("\\").append(copyDbName);
-
-		sqlite3* pCopyDb;
-		int openResult = sqlite3_open(copyDbPath.c_str(), &pCopyDb);
-
-		if (openResult != 0)
-		{
-			outputLog({ "Open db ", copyDbPath , "failed" });
-			continue;
-		}
-		else
-		{
-			outputLog({ "Open db ", copyDbPath , " success" });
-			dbInfo.pCopyDb = pCopyDb;
-		}
-
-		runSqlExec(dbInfo.pDb, "select name, sql from sqlite_master where type='table'",
-		           it->first,
-		           reinterpret_cast<DWORD*>(sqliteMasterCallback));
-	}
-
-	outputLog("query sqlite master finish");
-
-	// 遍历表
-	for (auto it = handleMap.begin(); it != handleMap.end(); ++it)
-	{
-		DbInfo& dbInfo = it->second;
-		vector<string> tableList = dbInfo.tableList;
-
-		sqlite3_exec(dbInfo.pCopyDb, "begin;", nullptr, nullptr, nullptr);
-
-		char log[100] = {0};
-		sprintf_s(log, "DB %s table count: %d", dbInfo.dbName.c_str(), tableList.size());
-		outputLog(log);
-
-		int index = 0;
-		for (auto& tableName : tableList)
-		{
-			sprintf_s(log, "Select All From %s.%s", dbInfo.dbName.c_str(), tableName.c_str());
-			outputLog(log);
-
-			dbInfo.tableName = tableName;
-			dbInfo.count = dbInfo.tableCountList[index];
-			dbInfo.currentCount = 0;
-			string sql = "select * from " + tableName;
-			runSqlExec(dbInfo.pDb, sql.c_str(), dbInfo.dbName, reinterpret_cast<DWORD*>(selectAllCallback));
-
-			index++;
-			sprintf_s(log, "Select All and Insert Finish");
-			outputLog(log);
-		}
-
-		sqlite3_exec(dbInfo.pCopyDb, "commit;", nullptr, nullptr, nullptr);
-		sqlite3_close(dbInfo.pCopyDb);
-	}
-
-	return 0;
-}
-
-int runSqlExec(DWORD pDb, const char* sql, string dbName, DWORD* callback)
-{
-	char* errMsg = nullptr;
-	int result = sqlExec(pDb, sql, callback, &dbName, &errMsg);
-	string resultStr = "Exec result: ";
-	resultStr += to_string(result);
-	if (errMsg != nullptr)
-	{
-		resultStr += errMsg;
-	}
-	resultStr += sql;
-	outputLog(resultStr);
-
-	return result;
+	return startDatabaseCopy(handleMap, userPath, weChatId, sqliteExec);
 }
 
 void __stdcall getDb(DWORD pEsi)
@@ -336,7 +104,7 @@ void __stdcall getDb(DWORD pEsi)
 	{
 		sprintf_s(str, "Save %s", dbName.c_str());
 		outputLog(str);
-		DbInfo info = {dbName, pEsi};
+		DbInfo info = {dbName, reinterpret_cast<sqlite3*>(pEsi)};
 		handleMap[dbName] = info;
 	}
 

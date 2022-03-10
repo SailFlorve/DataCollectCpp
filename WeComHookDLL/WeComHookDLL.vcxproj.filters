@@ -15,36 +15,36 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AES.h">
+    <ClInclude Include="framework.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Chook.h">
+    <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="common_util.h">
+    <ClInclude Include="..\Common\Chook.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="sqlite3.h">
+    <ClInclude Include="..\Common\common_util.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="sql_copy.h">
+    <ClInclude Include="..\Common\sqlite3.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Chook.cpp">
+    <ClCompile Include="dllmain.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="common_util.cpp">
+    <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="sqlite3.c">
+    <ClCompile Include="..\Common\Chook.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="..\Common\common_util.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="sql_copy.cpp">
+    <ClCompile Include="..\Common\sqlite3.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

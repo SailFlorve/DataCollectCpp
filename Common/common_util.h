@@ -9,20 +9,22 @@
 #include <ShlObj.h>
 
 
-using namespace std;
+std::string getFileVersion(HMODULE hmodule);
 
-string getFileVersion(HMODULE hmodule);
-
-void sendPipeMessage(LPCWSTR pipeName, const vector<string>& messages);
+void sendPipeMessage(LPCWSTR pipeName, const std::vector<std::string>& messages);
 
 DWORD getDllAddress(const wchar_t* lpModuleName, int maxRetry = 10);
 
-void outputLog(const string& log, bool inConsole = false);
+void outputLog(const std::string& log, bool inConsole = false);
 
-void outputLog(initializer_list<string> logs, bool inConsole = false);
+void outputLog(std::initializer_list<std::string> logs, bool inConsole = false);
 
-string getKeyStrHex(int len, char* key);
+std::string getKeyStrHex(int len, char* key);
 
 bool isProcessRunAsAdmin();
 
 wchar_t* getDocumentsPath();
+
+std::string generateCopyDbName(const std::string& dbName);
+
+int getTableType(const std::string& tableType);

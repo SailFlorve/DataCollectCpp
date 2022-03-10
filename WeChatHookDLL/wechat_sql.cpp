@@ -361,8 +361,3 @@ __declspec(naked) void dbHandleHookFunc()
 		jmp currentAddr.dbHandleOldCallReJmpAddr;
 		}
 }
-
-string generateCopyDbName(const string& dbName)
-{
-	return string("decrypt_") + dbName;
-}

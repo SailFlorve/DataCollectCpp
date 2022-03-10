@@ -3,6 +3,8 @@
 
 #pragma comment(lib, "version.lib")
 
+using namespace std;
+
 string getFileVersion(HMODULE hmodule)
 {
 	WCHAR versionFilePath[MAX_PATH];
@@ -113,6 +115,8 @@ void outputLog(initializer_list<string> logs, bool inConsole)
 		logStr += log;
 		logStr += " ";
 	}
+	logStr += "\n";
+
 	OutputDebugStringA(logStr.c_str());
 	if (inConsole)
 	{
@@ -165,4 +169,26 @@ wchar_t* getDocumentsPath()
 		return nullptr;
 	}
 	return homePath;
+}
+
+
+string generateCopyDbName(const string& dbName)
+{
+	return string("decrypt_") + dbName;
+}
+
+int getTableType(const std::string& tableType)
+{
+	if (tableType == "INT" || tableType == "int" || tableType == "integer" || tableType == "INTEGER")
+	{
+		return 0;
+	}
+	else if (tableType == "TEXT" || tableType == "text")
+	{
+		return 1;
+	}
+	else
+	{
+		return 2;
+	}
 }

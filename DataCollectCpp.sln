@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QQHookDLL", "QQHookDLL\QQHo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Common", "Common\Common.vcxproj", "{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WeComHookDLL", "WeComHookDLL\WeComHookDLL.vcxproj", "{0FDE5E1C-C10E-4BDD-9045-4F5674CFA3C4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -51,6 +53,14 @@ Global
 		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Release|x64.Build.0 = Release|x64
 		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Release|x86.ActiveCfg = Release|Win32
 		{B48EE2E6-8E94-41BF-9EAC-C8C62BB229B8}.Release|x86.Build.0 = Release|Win32
+		{0FDE5E1C-C10E-4BDD-9045-4F5674CFA3C4}.Debug|x64.ActiveCfg = Debug|x64
+		{0FDE5E1C-C10E-4BDD-9045-4F5674CFA3C4}.Debug|x64.Build.0 = Debug|x64
+		{0FDE5E1C-C10E-4BDD-9045-4F5674CFA3C4}.Debug|x86.ActiveCfg = Debug|Win32
+		{0FDE5E1C-C10E-4BDD-9045-4F5674CFA3C4}.Debug|x86.Build.0 = Debug|Win32
+		{0FDE5E1C-C10E-4BDD-9045-4F5674CFA3C4}.Release|x64.ActiveCfg = Release|x64
+		{0FDE5E1C-C10E-4BDD-9045-4F5674CFA3C4}.Release|x64.Build.0 = Release|x64
+		{0FDE5E1C-C10E-4BDD-9045-4F5674CFA3C4}.Release|x86.ActiveCfg = Release|Win32
+		{0FDE5E1C-C10E-4BDD-9045-4F5674CFA3C4}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

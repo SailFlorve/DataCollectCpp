@@ -56,7 +56,7 @@ int queryMasterAndCreateNewTables()
 		dbInfo.pCopyDb = pCopyDb;
 
 		int result = sqlExec(dbInfo.pDb, "select name, sql from sqlite_master where type='table'",
-		                     &sqliteMasterCallback, &dbName, nullptr);
+		                     sqliteMasterCallback, &dbName, nullptr);
 		outputLog({"Result:", to_string(result)});
 
 		if (result != SQLITE_OK)

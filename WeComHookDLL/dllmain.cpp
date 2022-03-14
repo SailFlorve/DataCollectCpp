@@ -25,6 +25,7 @@ DWORD lastDbPath;
 DWORD lastDbHandle;
 
 SqliteExec sqlLiteExec;
+SqliteOpen sqliteOpen;
 
 string weComUserDirPath;
 string weComId;
@@ -34,6 +35,8 @@ unordered_map<string, WeComHookAddress> addrMap = {
 };
 
 unordered_map<string, DbInfo> dbMap;
+
+LPCWSTR pipeName = L"\\\\.\\pipe\\WECOM_TEMP";
 
 BOOL APIENTRY DllMain(HMODULE hModule,
                       DWORD ul_reason_for_call,
@@ -96,6 +99,7 @@ void startInternal()
 	}
 
 	sqlLiteExec = reinterpret_cast<SqliteExec>(currentAddr.sqlExecAddr);
+	sqliteOpen = reinterpret_cast<SqliteOpen>(0x19B920 + dllAddress);
 
 	startGetDbHook();
 }
@@ -136,14 +140,13 @@ void __stdcall onGetDb()
 		weComId = dbPathStr.substr(wxWorkPos + 7, 16);
 
 		chook.StopHook();
-		// queryMasterAndCreateNewTables();
-		// selectAndInsertNewTables();
 
 		int result = startDatabaseCopy(dbMap, weComUserDirPath, weComId, sqlLiteExec);
 
 		if (result == 0)
 		{
 			MessageBoxA(nullptr, "激活成功", "激活", MB_OK);
+			sendPipeMessage(pipeName, {"SUCCESS", weComUserDirPath, weComId, "null", "\\"});
 		}
 		else
 		{

@@ -7,6 +7,7 @@
 #include <strstream>
 #include <iostream>
 #include <ShlObj.h>
+#include <io.h>
 
 
 std::string getFileVersion(HMODULE hmodule);
@@ -28,3 +29,5 @@ wchar_t* getDocumentsPath();
 std::string generateCopyDbName(const std::string& dbName);
 
 int getTableType(const std::string& tableType);
+
+bool isDirectoryExists(const std::string& path);

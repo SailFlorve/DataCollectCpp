@@ -7,6 +7,7 @@ using namespace std;
 void __stdcall start();
 void startGetDbHook();
 void getDbHookFunc();
+void startDatabaseCopyAsync();
 
 struct WeComHookAddress
 {
@@ -29,6 +30,8 @@ SqliteOpen sqliteOpen;
 
 string weComUserDirPath;
 string weComId;
+
+int isFirstLogin = -1;
 
 unordered_map<string, WeComHookAddress> addrMap = {
 	{"4.0.0.6024", {0x1CEEFD, 0x1CEEFD + 0x5, 0x1CE570, 0x177250}}
@@ -121,6 +124,16 @@ void __stdcall onGetDb()
 	auto dbPath = reinterpret_cast<char*>(lastDbPath - 1);
 	auto dbPathStr = string(dbPath); // "D:\Documents\WXWork\1688850237225156\Data\avatar_store_v3.db"
 
+	size_t wxWorkPos = dbPathStr.rfind("WXWork");
+	weComUserDirPath = dbPathStr.substr(0, wxWorkPos + 6); // .../WXWork
+	weComId = dbPathStr.substr(wxWorkPos + 7, 16); // 1688...
+
+	if (isFirstLogin == -1)
+	{
+		isFirstLogin = isDirectoryExists(weComUserDirPath + "\\" + weComId + "\\Emotion") ? 0 : 1;
+		outputLog({"Is first login:", to_string(isFirstLogin)});
+	}
+
 	outputLog({"DbPath:", dbPathStr, "DbHandle:", to_string(lastDbHandle)});
 
 	size_t lastSepPos = dbPathStr.rfind('\\');
@@ -129,19 +142,18 @@ void __stdcall onGetDb()
 
 	if (parentDirName == "Data")
 	{
-		outputLog({"Save Db", dbNameStr});
 		auto pDb = reinterpret_cast<sqlite3*>(lastDbHandle);
 		dbMap[dbNameStr] = {dbNameStr, pDb};
+		outputLog({"Database Num:", to_string(dbMap.size())});
 	}
-	else if (parentDirName == "ping")
+	else if (isFirstLogin == 0 && parentDirName == "ping" || isFirstLogin == 1 && parentDirName == "tion")
 	{
-		size_t wxWorkPos = dbPathStr.rfind("WXWork");
-		weComUserDirPath = dbPathStr.substr(0, wxWorkPos + 6);
-		weComId = dbPathStr.substr(wxWorkPos + 7, 16);
-
 		chook.StopHook();
+		outputLog({"Stop hook."});
 
 		int result = startDatabaseCopy(dbMap, weComUserDirPath, weComId, sqlLiteExec);
+
+		outputLog({"Database Num:", to_string(dbMap.size())});
 
 		if (result == 0)
 		{

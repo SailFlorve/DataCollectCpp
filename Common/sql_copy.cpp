@@ -15,6 +15,7 @@ unordered_map<string, DbInfo> dbInfoMap;
 string outputPath;
 SqliteExec sqlExec;
 
+
 int startDatabaseCopy(unordered_map<string, DbInfo> map, const string& userPath, const string& userId, SqliteExec exec)
 {
 	dbInfoMap = std::move(map);

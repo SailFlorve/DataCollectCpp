@@ -192,3 +192,8 @@ int getTableType(const std::string& tableType)
 		return 2;
 	}
 }
+
+bool isDirectoryExists(const std::string& path)
+{
+	return !_access(path.data(), 0);
+}

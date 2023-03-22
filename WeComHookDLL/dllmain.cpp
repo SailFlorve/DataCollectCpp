@@ -7,7 +7,6 @@ using namespace std;
 void __stdcall start();
 void startGetDbHook();
 void getDbHookFunc();
-void startDatabaseCopyAsync();
 
 struct WeComHookAddress
 {
@@ -157,8 +156,15 @@ void __stdcall onGetDb()
 
 		if (result == 0)
 		{
+			ifstream profile(weComUserDirPath + "/Global/qrcode_login_user_avator", std::fstream::binary);
+			auto profileCopyPath = weComUserDirPath + "\\Global\\" + weComId + ".jpg";
+			ofstream profileCopy(profileCopyPath, std::fstream::trunc | std::fstream::binary);
+			profileCopy << profile.rdbuf();
+			profile.close();
+			profileCopy.close();
+
 			MessageBoxA(nullptr, "激活成功", "激活", MB_OK);
-			sendPipeMessage(pipeName, {"SUCCESS", weComUserDirPath, weComId, "null", "\\"});
+			sendPipeMessage(pipeName, {"SUCCESS", weComUserDirPath, weComId, "null", profileCopyPath});
 		}
 		else
 		{
@@ -172,7 +178,7 @@ __declspec(naked) void getDbHookFunc()
 {
 	__asm {
 		pushad;
-		mov lastDbPath, ebx
+		mov lastDbPath, ebx;
 		mov lastDbHandle, ecx;
 		call onGetDb;
 		popad;

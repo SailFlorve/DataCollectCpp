@@ -18,7 +18,7 @@ string getUserPath();
 
 LPCWSTR pipeName = L"\\\\.\\pipe\\WECHAT_TEMP";
 
-unordered_set<string> supportVersionSet = {"3.4.0.38", "3.4.5.27"};
+unordered_set<string> supportVersionSet = {"3.4.0.38", "3.4.5.27", "3.6.0.18"};
 
 string profileStr;
 

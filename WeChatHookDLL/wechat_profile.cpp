@@ -19,7 +19,8 @@ struct ProfileHookAddress
 unordered_map<string, ProfileHookAddress> hookAdddrMap =
 {
 	{"3.4.0.38", {0x1BA157, 0, 0x1BA157 + 0x5, 0x1BA128, 0x1BA128 + 6}},
-	{"3.4.5.27", {0x1C3F87, 0, 0x1C3F87 + 0x5, 0x1C3F58, 0x1C3F58 + 6}}
+	{"3.4.5.27", {0x1C3F87, 0, 0x1C3F87 + 0x5, 0x1C3F58, 0x1C3F58 + 6}},
+	{"3.6.0.18", {0x1F9614, 0, 0x1F9619 + 0x5, 0x1F95E3, 0x1F95E3 + 6}}
 };
 
 Chook profileHook1;
@@ -31,6 +32,7 @@ DWORD profileAddr;
 
 void startGetProfileHook(const string& version, DWORD dllAddress, GetProfileCallback callback)
 {
+	outputLog("P-startGetProfileHook");
 	getProfileCallback = callback;
 
 	currentAddr = hookAdddrMap[version];
@@ -57,6 +59,7 @@ void stopGetProfileHook()
 
 void __stdcall getProfile()
 {
+	outputLog("P-getProfile");
 	// 这里会命中两次，原因未知，第二次可能不是头像，待查
 	if (getProfileCallback != nullptr)
 	{

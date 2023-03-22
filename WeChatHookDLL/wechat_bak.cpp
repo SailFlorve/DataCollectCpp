@@ -2,6 +2,8 @@
 #include "pch.h"
 #include "wechat_bak.h"
 
+#include "common_util.h"
+
 using namespace std;
 
 #define WxDatabaseKey  0x126DCC0  //数据库密钥基址
@@ -13,18 +15,18 @@ using namespace std;
 #if _MSC_VER>=1900
 #include <cstdio>
 _ACRTIMP_ALT FILE* __cdecl __acrt_iob_func(unsigned);
-#ifdef __cplusplus 
+#ifdef __cplusplus
 extern "C"
-#endif 
-FILE * __cdecl __iob_func(unsigned i) {
+#endif
+FILE* __cdecl __iob_func(unsigned i)
+{
 	return __acrt_iob_func(i);
 }
 #endif /* _MSC_VER>=1900 */
 
 
-
 #undef _UNICODE
-#define SQLITE_FILE_HEADER "SQLite format 3" 
+#define SQLITE_FILE_HEADER "SQLite format 3"
 #define IV_SIZE 16
 #define HMAC_SHA1_SIZE 20
 #define KEY_SIZE 32
@@ -44,17 +46,20 @@ FILE * __cdecl __iob_func(unsigned i) {
 //pc端密码是经过OllyDbg得到的64位pass,是64位，不是网上传的32位，这里是个坑
 char fileStorage[] = "D:/WeChatDecrypt/";
 
-struct BackupKeyAddress {
+struct BackupKeyAddress
+{
 	DWORD backupKeyAddrFirstOffset;
 	DWORD backupKeyAddrSecondOffset;
 };
 
 unordered_map<string, BackupKeyAddress> addrMap = {
 	{"3.4.0.38", {0x01E26A20, 0x130}},
-	{"3.4.5.27", {0x01EA802C, 0x130}}
+	{"3.4.5.27", {0x01EA802C, 0x130}},
+	{"3.6.0.18", {0x02257b1c, 0x130}}
 };
 
-unsigned char* CAES::aes_128_ecb_decrypt(const char* ciphertext, int text_size, const char* key, int key_size, int& size)
+unsigned char* CAES::aes_128_ecb_decrypt(const char* ciphertext, int text_size, const char* key, int key_size,
+                                         int& size)
 {
 	EVP_CIPHER_CTX* ctx;
 	ctx = EVP_CIPHER_CTX_new();
@@ -77,8 +82,8 @@ unsigned char* CAES::aes_128_ecb_decrypt(const char* ciphertext, int text_size, 
 	return res;
 }
 
-int decryptBackupDb(const char* filename, unsigned char* pass, int nKey) {
-
+int decryptBackupDb(const char* filename, unsigned char* pass, int nKey)
+{
 	FILE* fpdb;
 	char dbfilename[1024];
 	memset(dbfilename, 0, sizeof(dbfilename));
@@ -86,7 +91,8 @@ int decryptBackupDb(const char* filename, unsigned char* pass, int nKey) {
 	memcpy(dbfilename + sizeof(fileStorage) - 1, filename, strlen(filename));
 	memset(dbfilename + sizeof(fileStorage) - 1 + strlen(filename), 0, 1);
 	fopen_s(&fpdb, dbfilename, "rb+");
-	if (!fpdb) {
+	if (!fpdb)
+	{
 		MessageBoxA(NULL, "ERROR", "打开文件错误", MB_OK);
 		return 0;
 	}
@@ -97,25 +103,26 @@ int decryptBackupDb(const char* filename, unsigned char* pass, int nKey) {
 	fread(pDbBuffer, 1, nFileSize, fpdb);
 	fclose(fpdb);
 
-	unsigned char salt[16] = { 0 };
+	unsigned char salt[16] = {0};
 	memcpy(salt, pDbBuffer, 16);
 
 #ifndef NO_USE_HMAC_SHA1
-	unsigned char mac_salt[16] = { 0 };
+	unsigned char mac_salt[16] = {0};
 	memcpy(mac_salt, salt, 16);
-	for (int i = 0; i < sizeof(salt); i++) {
+	for (int i = 0; i < sizeof(salt); i++)
+	{
 		mac_salt[i] ^= 0x3a;
 	}
 #endif
 
-	int reserve = IV_SIZE;      //校验码长度,PC端每4096字节有48字节
+	int reserve = IV_SIZE; //校验码长度,PC端每4096字节有48字节
 #ifndef NO_USE_HMAC_SHA1
 	reserve += HMAC_SHA1_SIZE;
 #endif
 	reserve = ((reserve % AES_BLOCK_SIZE) == 0) ? reserve : ((reserve / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
-	unsigned char key[KEY_SIZE] = { 0 };
-	unsigned char mac_key[KEY_SIZE] = { 0 };
+	unsigned char key[KEY_SIZE] = {0};
+	unsigned char mac_key[KEY_SIZE] = {0};
 
 	OpenSSL_add_all_algorithms();
 	PKCS5_PBKDF2_HMAC_SHA1((const char*)pass, nKey, salt, sizeof(salt), DEFAULT_ITER, sizeof(key), key);
@@ -129,10 +136,10 @@ int decryptBackupDb(const char* filename, unsigned char* pass, int nKey) {
 	unsigned char pDecryptPerPageBuffer[DEFAULT_PAGESIZE];
 	int nPage = 1;
 	int offset = 16;
-	while (pTemp < pDbBuffer + nFileSize) {
-
+	while (pTemp < pDbBuffer + nFileSize)
+	{
 #ifndef NO_USE_HMAC_SHA1
-		unsigned char hash_mac[HMAC_SHA1_SIZE] = { 0 };
+		unsigned char hash_mac[HMAC_SHA1_SIZE] = {0};
 		unsigned int hash_len = 0;
 		HMAC_CTX hctx;
 		HMAC_CTX_init(&hctx);
@@ -141,12 +148,14 @@ int decryptBackupDb(const char* filename, unsigned char* pass, int nKey) {
 		HMAC_Update(&hctx, (const unsigned char*)&nPage, sizeof(nPage));
 		HMAC_Final(&hctx, hash_mac, &hash_len);
 		HMAC_CTX_cleanup(&hctx);
-		if (0 != memcmp(hash_mac, pTemp + DEFAULT_PAGESIZE - reserve + IV_SIZE, sizeof(hash_mac))) {
+		if (0 != memcmp(hash_mac, pTemp + DEFAULT_PAGESIZE - reserve + IV_SIZE, sizeof(hash_mac)))
+		{
 			MessageBoxA(NULL, "ERROR", "hash错误", MB_OK);
 		}
 #endif
 		//
-		if (nPage == 1) {
+		if (nPage == 1)
+		{
 			memcpy(pDecryptPerPageBuffer, SQLITE_FILE_HEADER, offset);
 		}
 
@@ -157,14 +166,15 @@ int decryptBackupDb(const char* filename, unsigned char* pass, int nKey) {
 
 		int nDecryptLen = 0;
 		int nTotal = 0;
-		EVP_CipherUpdate(ectx, pDecryptPerPageBuffer + offset, &nDecryptLen, pTemp + offset, DEFAULT_PAGESIZE - reserve - offset);
+		EVP_CipherUpdate(ectx, pDecryptPerPageBuffer + offset, &nDecryptLen, pTemp + offset,
+		                 DEFAULT_PAGESIZE - reserve - offset);
 		nTotal = nDecryptLen;
 		EVP_CipherFinal_ex(ectx, pDecryptPerPageBuffer + offset + nDecryptLen, &nDecryptLen);
 		nTotal += nDecryptLen;
 		EVP_CIPHER_CTX_free(ectx);
 
 		memcpy(pDecryptPerPageBuffer + DEFAULT_PAGESIZE - reserve, pTemp + DEFAULT_PAGESIZE - reserve, reserve);
-		char decFile[1024] = { 0 };
+		char decFile[1024] = {0};
 		sprintf_s(decFile, "%sdec_%s", fileStorage, filename);
 		FILE* fp;
 		fopen_s(&fp, decFile, "ab+");
@@ -191,7 +201,8 @@ int decryptBackupFile(const char* defilename, unsigned char* key, int nKey)
 	memcpy(filename + sizeof(fileStorage) - 1, defilename, strlen(defilename));
 	memset(filename + sizeof(fileStorage) - 1 + strlen(defilename), 0, 1);
 	fopen_s(&fpdb, filename, "rb+");
-	if (!fpdb) {
+	if (!fpdb)
+	{
 		MessageBoxA(NULL, "ERROR", "打开文件错误", MB_OK);
 		return 0;
 	}
@@ -203,7 +214,7 @@ int decryptBackupFile(const char* defilename, unsigned char* key, int nKey)
 	fclose(fpdb);
 	int size = 0;
 	unsigned char* decrypt = CAES::aes_128_ecb_decrypt((const char*)pDeBuffer, nFileSize, (const char*)key, nKey, size);
-	char decFile[1024] = { 0 };
+	char decFile[1024] = {0};
 	sprintf_s(decFile, "%sdec_%s", fileStorage, defilename);
 	FILE* fp;
 	fopen_s(&fp, decFile, "ab+");
@@ -255,7 +266,7 @@ char* Get_BAK_Key(DWORD baseAddr, char* bakkey, BackupKeyAddress addr)
 	DWORD BAK_keyaddrbase = addr.backupKeyAddrFirstOffset;
 	DWORD BAK_offset = addr.backupKeyAddrSecondOffset;
 
-	
+
 	DWORD bak_f_Addr = baseAddr + BAK_keyaddrbase;
 	DWORD* bak_f = (DWORD*)((*(DWORD*)bak_f_Addr) + BAK_offset);
 	LPVOID* pAddr = (LPVOID*)(*bak_f);
@@ -267,7 +278,7 @@ char* Get_BAK_Key(DWORD baseAddr, char* bakkey, BackupKeyAddress addr)
 
 int outputKey(char* BAK_Key)
 {
-	char change[] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
+	char change[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 	string output_Key;
 	for (int i = 0; i < 0x20; i++)
 	{
@@ -286,7 +297,7 @@ int outputKey(char* BAK_Key)
 
 string getKeyStr(char* BAK_Key)
 {
-	char change[] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
+	char change[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 	string result;
 	for (int i = 0; i < 0x20; i++)
 	{
@@ -307,9 +318,9 @@ string getKeyStr(char* BAK_Key)
 void Start()
 {
 	MessageBoxA(NULL, "ATTACH", "dll已注入", MB_OK);
-	char BAK_Key[0x20] = { 0 };
-	char DB_Key[0x20] = { 0 };
-	char WX_id[20] = { 0 };
+	char BAK_Key[0x20] = {0};
+	char DB_Key[0x20] = {0};
+	char WX_id[20] = {0};
 	//Get_BAK_Key(BAK_Key);
 	//Get_DB_Key(DB_Key);
 	//Get_Wx_id(WX_id);
@@ -320,8 +331,9 @@ void Start()
 	outputKey(DB_Key);
 }
 
-void startDectyptBak(DWORD baseAddr, string version) {
-	char BAK_Key[0x20] = { 0 };
+void startDectyptBak(DWORD baseAddr, string version)
+{
+	char BAK_Key[0x20] = {0};
 	BackupKeyAddress addr = addrMap[version];
 	Get_BAK_Key(baseAddr, BAK_Key, addr);
 	decryptBackupFile("BAK_0_TEXT", (unsigned char*)BAK_Key, 0x10);
@@ -331,16 +343,19 @@ void startDectyptBak(DWORD baseAddr, string version) {
 
 string getBackupKey(DWORD baseAddr, string version)
 {
+	outputLog("P-getBackupKey");
 	char log[100];
 	sprintf_s(log, "getBackupKey %ld ", baseAddr);
 	OutputDebugStringA(log);
-	char BAK_Key[0x20] = { 0 };
+	char BAK_Key[0x20] = {0};
 	BackupKeyAddress addr = addrMap[version];
 
-	try {
+	try
+	{
 		Get_BAK_Key(baseAddr, BAK_Key, addr);
 	}
-	catch (exception& e) {
+	catch (exception& e)
+	{
 		return "";
 	}
 	string keyStr = getKeyStr(BAK_Key);

@@ -5,10 +5,10 @@
 
 using namespace std;
 
-string getFileVersion(HMODULE hmodule)
+string getFileVersion(HMODULE hModule)
 {
 	WCHAR versionFilePath[MAX_PATH];
-	if (GetModuleFileName(hmodule, versionFilePath, MAX_PATH) == 0)
+	if (GetModuleFileName(hModule, versionFilePath, MAX_PATH) == 0)
 	{
 		return "";
 	}
@@ -26,7 +26,7 @@ string getFileVersion(HMODULE hmodule)
 			{
 				//主版本
 				//3
-				int marjorVersion = pVsInfo->dwFileVersionMS >> 16 & 0x0000FFFF;
+				int majorVersion = pVsInfo->dwFileVersionMS >> 16 & 0x0000FFFF;
 				//4
 				int minorVersion = pVsInfo->dwFileVersionMS & 0x0000FFFF;
 				//0
@@ -36,7 +36,7 @@ string getFileVersion(HMODULE hmodule)
 
 				//把版本变成字符串
 				strstream verSs;
-				verSs << marjorVersion << "." << minorVersion << "." << buildNum << "." << revisionNum;
+				verSs << majorVersion << "." << minorVersion << "." << buildNum << "." << revisionNum;
 				verSs >> versionStr;
 			}
 		}

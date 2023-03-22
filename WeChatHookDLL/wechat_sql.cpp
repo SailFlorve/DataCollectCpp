@@ -26,7 +26,8 @@ GetHandleCallback getHandleCallback = nullptr;
 unordered_map<string, SqlHookAddress> addrMap =
 {
 	{"3.4.0.38", SqlHookAddress{0xD5E1EF, 0xD5D780, 0xD5E1EF + 0x5, 0xD30A00, 0xD5DF10}},
-	{"3.4.5.27", SqlHookAddress{0xDA6F3F, 0xDA64D0, 0xDA6F3F + 0x5, 0xD79760, 0xDA6C60}}
+	{"3.4.5.27", SqlHookAddress{0xDA6F3F, 0xDA64D0, 0xDA6F3F + 0x5, 0xD79760, 0xDA6C60}},
+	{"3.6.0.18", SqlHookAddress{0x138A6C4, 0x1389CC0, 0x138A6C4 + 0x5, 0x1356570, 0x138A430}}
 };
 
 SqlHookAddress currentAddr;
@@ -44,6 +45,7 @@ string weChatId;
 
 void startGetDbHandleHook(const string& version, DWORD dllAddress, GetHandleCallback callback)
 {
+	outputLog("P-startGetDbHandleHook");
 	getHandleCallback = callback;
 
 	currentAddr = addrMap[version];
@@ -75,6 +77,7 @@ int startCopyDb()
 
 void __stdcall getDb(DWORD pEsi)
 {
+	outputLog("P-getDb");
 	char str[0x200] = {0};
 	auto path = reinterpret_cast<char*>(lastDbPath);
 
@@ -91,7 +94,6 @@ void __stdcall getDb(DWORD pEsi)
 		userPath = pathStr.substr(0, posTmp + 13); // .../WeChat Files/
 		weChatId = pathStr.substr(posTmp + 13, 19); // wxid_...
 	}
-
 	string::size_type pos = pathStr.find_last_of('\\');
 
 	string dbName(pathStr.substr(pos + 1));
@@ -99,7 +101,6 @@ void __stdcall getDb(DWORD pEsi)
 	string::size_type pos2 = dbName.find("MediaMSG");
 	string::size_type pos3 = dbName.find("FTS");
 	string::size_type pos4 = dbName.find("Applet");
-
 	if ((pos1 != string::npos || pos2 != string::npos) && pos3 == string::npos)
 	{
 		sprintf_s(str, "Save %s", dbName.c_str());
@@ -107,7 +108,6 @@ void __stdcall getDb(DWORD pEsi)
 		DbInfo info = {dbName, reinterpret_cast<sqlite3*>(pEsi)};
 		handleMap[dbName] = info;
 	}
-
 	// Applet是最后一个出现的数据库，open它之后即回调获取句柄结束
 	if (pos4 != string::npos)
 	{
